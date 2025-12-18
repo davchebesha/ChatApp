@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chat-client
+  namespace: chat-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: chat-client
+  template:
+    metadata:
+      labels:
+        app: chat-client
+    spec:
+      containers:
+      - name: chat-client
+        image: chat-client:latest
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chat-client-service
+  namespace: chat-app
+spec:
+  selector:
+    app: chat-client
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP

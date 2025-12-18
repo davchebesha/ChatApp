@@ -1,0 +1,18 @@
+{
+  "name": "distributed-chat-app",
+  "version": "1.0.0",
+  "description": "Distributed chat application with real-time messaging and video calling",
+  "main": "index.js",
+  "scripts": {
+    "install-all": "cd server && npm install && cd ../client && npm install",
+    "dev": "concurrently \"cd server && npm run dev\" \"cd client && npm start\"",
+    "start": "cd server && npm start",
+    "build": "cd client && npm run build"
+  },
+  "keywords": ["chat", "websocket", "webrtc", "distributed"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
