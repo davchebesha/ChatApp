@@ -1,0 +1,207 @@
+.draggable-sidebar {
+  position: fixed;
+  top: 0;
+  height: 100vh;
+  background: var(--color-surface, #f8f9fa);
+  border-color: var(--color-border, #e1e5e9);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.draggable-sidebar.left-sidebar {
+  border-right: 1px solid var(--color-border, #e1e5e9);
+}
+
+.draggable-sidebar.right-sidebar {
+  border-left: 1px solid var(--color-border, #e1e5e9);
+  right: 0;
+}
+
+.draggable-sidebar.closed {
+  width: 0 !important;
+  border: none;
+}
+
+.draggable-sidebar.dragging {
+  transition: none;
+}
+
+.sidebar-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* Sidebar Resizer */
+.sidebar-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 8px;
+  cursor: col-resize;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+  transition: all 0.2s ease;
+}
+
+.left-resizer {
+  right: -4px;
+}
+
+.right-resizer {
+  left: -4px;
+}
+
+.sidebar-resizer:hover {
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.sidebar-resizer.resizing {
+  background: rgba(102, 126, 234, 0.2);
+}
+
+.resizer-handle {
+  width: 4px;
+  height: 40px;
+  background: var(--color-border, #e1e5e9);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0;
+}
+
+.sidebar-resizer:hover .resizer-handle,
+.sidebar-resizer.resizing .resizer-handle {
+  opacity: 1;
+  background: var(--color-primary, #667eea);
+}
+
+.resizer-dots {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+}
+
+.resizer-dots span {
+  width: 2px;
+  height: 2px;
+  background: white;
+  border-radius: 50%;
+  opacity: 0.8;
+}
+
+/* Resize Indicator */
+.resize-indicator {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--color-primary, #667eea);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  pointer-events: none;
+  z-index: 1002;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Custom Scrollbar */
+.sidebar-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb {
+  background: var(--color-border, #e1e5e9);
+  border-radius: 3px;
+}
+
+.sidebar-content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-textSecondary, #666);
+}
+
+/* Theme-specific adjustments */
+.draggable-sidebar[data-theme="dark"] {
+  background: var(--color-surface, #2d2d2d);
+  border-color: var(--color-border, #404040);
+}
+
+.draggable-sidebar[data-theme="dark"] .resizer-handle {
+  background: var(--color-border, #404040);
+}
+
+.draggable-sidebar[data-theme="dark"] .sidebar-resizer:hover .resizer-handle,
+.draggable-sidebar[data-theme="dark"] .sidebar-resizer.resizing .resizer-handle {
+  background: var(--color-primary, #667eea);
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .draggable-sidebar {
+    position: fixed;
+    z-index: 1001;
+  }
+  
+  .sidebar-resizer {
+    display: none;
+  }
+  
+  .draggable-sidebar.left-sidebar {
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .draggable-sidebar.left-sidebar.open {
+    transform: translateX(0);
+  }
+  
+  .draggable-sidebar.right-sidebar {
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+  }
+  
+  .draggable-sidebar.right-sidebar.open {
+    transform: translateX(0);
+  }
+}
+
+/* Animation for smooth opening/closing */
+@keyframes slideInLeft {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.draggable-sidebar.left-sidebar.open {
+  animation: slideInLeft 0.3s ease-out;
+}
+
+.draggable-sidebar.right-sidebar.open {
+  animation: slideInRight 0.3s ease-out;
+}

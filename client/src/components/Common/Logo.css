@@ -1,0 +1,99 @@
+.nexus-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--color-primary, #667eea);
+}
+
+.logo-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo-icon svg {
+  display: block;
+}
+
+.logo-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.logo-brand {
+  font-weight: 700;
+  color: var(--color-primary, #667eea);
+}
+
+.logo-subtitle {
+  font-weight: 500;
+  color: var(--color-textSecondary, #666);
+  font-size: 0.8em;
+}
+
+/* Size variants */
+.logo-sm .logo-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.logo-sm .logo-brand {
+  font-size: 16px;
+}
+
+.logo-sm .logo-subtitle {
+  font-size: 12px;
+}
+
+.logo-md .logo-icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.logo-md .logo-brand {
+  font-size: 20px;
+}
+
+.logo-md .logo-subtitle {
+  font-size: 14px;
+}
+
+.logo-lg .logo-icon svg {
+  width: 48px;
+  height: 48px;
+}
+
+.logo-lg .logo-brand {
+  font-size: 28px;
+}
+
+.logo-lg .logo-subtitle {
+  font-size: 18px;
+}
+
+.logo-xl .logo-icon svg {
+  width: 64px;
+  height: 64px;
+}
+
+.logo-xl .logo-brand {
+  font-size: 36px;
+}
+
+.logo-xl .logo-subtitle {
+  font-size: 24px;
+}
+
+/* White variant for dark backgrounds */
+.nexus-logo.logo-white {
+  color: white;
+}
+
+.nexus-logo.logo-white .logo-brand {
+  color: white;
+}
+
+.nexus-logo.logo-white .logo-subtitle {
+  color: rgba(255, 255, 255, 0.8);
+}

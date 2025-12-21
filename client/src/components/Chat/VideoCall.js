@@ -26,6 +26,7 @@ const VideoCall = ({ chat, onClose, isVoiceOnly = false }) => {
     return () => {
       endCall();
     };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const startCall = async () => {

@@ -6,10 +6,16 @@ import 'react-toastify/dist/ReactToastify.css';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { SocketProvider } from './contexts/SocketContext';
 import { ChatProvider } from './contexts/ChatContext';
+import { ThemeProvider } from './contexts/ThemeContext';
+import { NotificationProvider } from './contexts/NotificationContext';
+import { NavigationProvider } from './contexts/NavigationContext';
 
+import LandingPage from './components/Landing/LandingPage';
 import Login from './components/Auth/Login';
 import Register from './components/Auth/Register';
 import ChatLayout from './components/Chat/ChatLayout';
+import SettingsPage from './components/Settings/SettingsPage';
+import RouteGuard from './components/Navigation/RouteGuard';
 
 import './App.css';
 
@@ -19,30 +25,73 @@ const ProtectedRoute = ({ children }) => {
   return user ? children : <Navigate to="/login" />;
 };
 
+// Public route component (redirect to chat if already logged in)
+const PublicRoute = ({ children }) => {
+  const { user } = useAuth();
+  return user ? <Navigate to="/chat" /> : children;
+};
+
 function App() {
   return (
     <Router>
-      <AuthProvider>
-        <SocketProvider>
-          <ChatProvider>
-            <div className="App">
-              <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route
-                  path="/*"
-                  element={
-                    <ProtectedRoute>
-                      <ChatLayout />
-                    </ProtectedRoute>
-                  }
-                />
-              </Routes>
-              <ToastContainer position="top-right" autoClose={3000} />
-            </div>
-          </ChatProvider>
-        </SocketProvider>
-      </AuthProvider>
+      <ThemeProvider>
+        <NotificationProvider>
+          <NavigationProvider>
+            <AuthProvider>
+              <SocketProvider>
+                <ChatProvider>
+                  <RouteGuard>
+                    <div className="App">
+                      <Routes>
+                        <Route path="/" element={
+                          <PublicRoute>
+                            <LandingPage />
+                          </PublicRoute>
+                        } />
+                        <Route path="/login" element={
+                          <PublicRoute>
+                            <Login />
+                          </PublicRoute>
+                        } />
+                        <Route path="/register" element={
+                          <PublicRoute>
+                            <Register />
+                          </PublicRoute>
+                        } />
+                        <Route
+                          path="/settings"
+                          element={
+                            <ProtectedRoute>
+                              <SettingsPage />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/chat/*"
+                          element={
+                            <ProtectedRoute>
+                              <ChatLayout />
+                            </ProtectedRoute>
+                          }
+                        />
+                        <Route
+                          path="/*"
+                          element={
+                            <ProtectedRoute>
+                              <ChatLayout />
+                            </ProtectedRoute>
+                          }
+                        />
+                      </Routes>
+                      <ToastContainer position="top-right" autoClose={3000} />
+                    </div>
+                  </RouteGuard>
+                </ChatProvider>
+              </SocketProvider>
+            </AuthProvider>
+          </NavigationProvider>
+        </NotificationProvider>
+      </ThemeProvider>
     </Router>
   );
 }

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { toast } from 'react-toastify';
+import { FiEye, FiEyeOff } from 'react-icons/fi';
 import './Auth.css';
 
 const Register = () => {
@@ -10,6 +11,8 @@ const Register = () => {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const { register } = useAuth();
 
   const handleSubmit = async (e) => {
@@ -42,7 +45,10 @@ const Register = () => {
   return (
     <div className="auth-container">
       <div className="auth-card">
-        <h1>Chat App</h1>
+        <div className="auth-header">
+          <h1>Nexus ChatApp</h1>
+          <p>Create your account to get started.</p>
+        </div>
         <h2>Register</h2>
         
         <form onSubmit={handleSubmit}>
@@ -54,6 +60,8 @@ const Register = () => {
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               disabled={loading}
+              required
+              minLength={3}
             />
           </div>
 
@@ -65,29 +73,48 @@ const Register = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
+              required
             />
           </div>
 
-          <div className="form-group">
+          <div className="form-group password-group">
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               className="input"
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
+              required
+              minLength={6}
             />
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? <FiEyeOff /> : <FiEye />}
+            </button>
           </div>
 
-          <div className="form-group">
+          <div className="form-group password-group">
             <input
-              type="password"
+              type={showConfirmPassword ? "text" : "password"}
               className="input"
               placeholder="Confirm Password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               disabled={loading}
+              required
+              minLength={6}
             />
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+            >
+              {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+            </button>
           </div>
 
           <button type="submit" className="btn btn-primary btn-block" disabled={loading}>

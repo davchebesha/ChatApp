@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FiBell, FiPhone, FiMessageSquare, FiUsers, FiUserPlus, FiX } from 'react-icons/fi';
 import { useChat } from '../../contexts/ChatContext';
-import api from '../../services/api';
 import { formatDistanceToNow } from 'date-fns';
 import './Notifications.css';
 

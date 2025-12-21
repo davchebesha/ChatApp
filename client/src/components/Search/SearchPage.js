@@ -19,56 +19,55 @@ const SearchPage = ({ onClose }) => {
   const { user } = useAuth();
 
   useEffect(() => {
+    const performSearch = async () => {
+      setLoading(true);
+      try {
+        const promises = [];
+
+        if (searchType === 'all' || searchType === 'users') {
+          promises.push(
+            api.get(`/users/search?query=${searchQuery}`)
+              .then(res => ({ users: res.data.users }))
+              .catch(() => ({ users: [] }))
+          );
+        }
+
+        if (searchType === 'all' || searchType === 'messages') {
+          promises.push(
+            api.get(`/messages/search?query=${searchQuery}`)
+              .then(res => ({ messages: res.data.messages }))
+              .catch(() => ({ messages: [] }))
+          );
+        }
+
+        const responses = await Promise.all(promises);
+        const combinedResults = responses.reduce((acc, curr) => ({ ...acc, ...curr }), {});
+
+        // Filter chats locally
+        if (searchType === 'all' || searchType === 'chats') {
+          const filteredChats = chats.filter(chat => {
+            const chatName = chat.type === 'private'
+              ? chat.participants.find(p => p._id !== user.id)?.username || ''
+              : chat.name || '';
+            return chatName.toLowerCase().includes(searchQuery.toLowerCase());
+          });
+          combinedResults.chats = filteredChats;
+        }
+
+        setResults(combinedResults);
+      } catch (error) {
+        console.error('Search error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (searchQuery.length > 2) {
       performSearch();
     } else {
       setResults({ users: [], messages: [], chats: [] });
     }
-  }, [searchQuery, searchType]);
-
-  const performSearch = async () => {
-    setLoading(true);
-    try {
-      const promises = [];
-
-      if (searchType === 'all' || searchType === 'users') {
-        promises.push(
-          api.get(`/users/search?query=${searchQuery}`)
-            .then(res => ({ users: res.data.users }))
-            .catch(() => ({ users: [] }))
-        );
-      }
-
-      if (searchType === 'all' || searchType === 'messages') {
-        promises.push(
-          api.get(`/messages/search?query=${searchQuery}`)
-            .then(res => ({ messages: res.data.messages }))
-            .catch(() => ({ messages: [] }))
-        );
-      }
-
-      const responses = await Promise.all(promises);
-      const combinedResults = responses.reduce((acc, curr) => ({ ...acc, ...curr }), {});
-
-      // Filter chats locally
-      if (searchType === 'all' || searchType === 'chats') {
-        const filteredChats = chats.filter(chat => {
-          const chatName = chat.type === 'private'
-            ? chat.participants.find(p => p._id !== user.id)?.username || ''
-            : chat.name || '';
-          return chatName.toLowerCase().includes(searchQuery.toLowerCase());
-        });
-        combinedResults.chats = filteredChats;
-      }
-
-      setResults(prev => ({ ...prev, ...combinedResults }));
-    } catch (error) {
-      console.error('Search error:', error);
-      toast.error('Search failed');
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [searchQuery, searchType, chats, user.id]);
 
   const handleUserClick = async (selectedUser) => {
     try {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useChat } from '../../contexts/ChatContext';
-import { FiSearch, FiSettings, FiLogOut, FiMessageSquare, FiUser, FiBell } from 'react-icons/fi';
+import { FiSearch, FiSettings, FiLogOut, FiMessageSquare, FiBell } from 'react-icons/fi';
 import NewChatModal from './NewChatModal';
 import SearchPage from '../Search/SearchPage';
 import SettingsPage from '../Settings/SettingsPage';

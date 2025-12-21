@@ -1,0 +1,272 @@
+.about-nexus {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.about-header {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 30px;
+  background: var(--color-surface, #f8f9fa);
+  border-radius: 16px;
+  margin-bottom: 30px;
+  border: 1px solid var(--color-border, #e1e5e9);
+}
+
+.about-info h2 {
+  margin: 0 0 8px 0;
+  color: var(--color-text, #333);
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.about-info p {
+  margin: 0 0 12px 0;
+  color: var(--color-textSecondary, #666);
+  font-size: 16px;
+}
+
+.version-info {
+  display: flex;
+  gap: 15px;
+}
+
+.version, .build {
+  padding: 4px 12px;
+  background: var(--color-primary, #667eea);
+  color: white;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.build {
+  background: var(--color-secondary, #764ba2);
+}
+
+.progress-section {
+  background: var(--color-background, white);
+  padding: 25px;
+  border-radius: 16px;
+  margin-bottom: 30px;
+  border: 1px solid var(--color-border, #e1e5e9);
+}
+
+.progress-section h3 {
+  margin: 0 0 20px 0;
+  color: var(--color-text, #333);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 12px;
+  background: var(--color-surface, #f8f9fa);
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary, #667eea), var(--color-secondary, #764ba2));
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+.progress-stats {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+.progress-stats span:first-child {
+  color: var(--color-textSecondary, #666);
+}
+
+.progress-percentage {
+  color: var(--color-primary, #667eea);
+  font-weight: 600;
+}
+
+.features-section {
+  background: var(--color-background, white);
+  padding: 25px;
+  border-radius: 16px;
+  margin-bottom: 30px;
+  border: 1px solid var(--color-border, #e1e5e9);
+}
+
+.features-section h3 {
+  margin: 0 0 20px 0;
+  color: var(--color-text, #333);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.features-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--color-surface, #f8f9fa);
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.feature-item:hover {
+  background: rgba(102, 126, 234, 0.05);
+}
+
+.feature-status-icon {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.completed-icon {
+  color: var(--color-success, #28a745);
+  font-size: 16px;
+}
+
+.planned-dot {
+  width: 8px;
+  height: 8px;
+  background: var(--color-textSecondary, #666);
+  border-radius: 50%;
+}
+
+.feature-name {
+  flex: 1;
+  color: var(--color-text, #333);
+  font-weight: 500;
+}
+
+.feature-badge {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.feature-badge.completed {
+  background: rgba(40, 167, 69, 0.1);
+  color: var(--color-success, #28a745);
+}
+
+.feature-badge.planned {
+  background: rgba(102, 126, 234, 0.1);
+  color: var(--color-primary, #667eea);
+}
+
+.about-footer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.footer-section {
+  background: var(--color-background, white);
+  padding: 25px;
+  border-radius: 16px;
+  border: 1px solid var(--color-border, #e1e5e9);
+}
+
+.footer-section h4 {
+  margin: 0 0 15px 0;
+  color: var(--color-text, #333);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.footer-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.footer-section ul li {
+  padding: 6px 0;
+  color: var(--color-textSecondary, #666);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.credits {
+  background: linear-gradient(135deg, var(--color-primary, #667eea), var(--color-secondary, #764ba2));
+  color: white;
+  padding: 25px;
+  border-radius: 16px;
+  text-align: center;
+}
+
+.credits-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.heart-icon {
+  font-size: 24px;
+  color: #ff6b6b;
+}
+
+.credits p {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.tech-stack {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.tech-stack span {
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 16px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .about-nexus {
+    padding: 15px;
+  }
+  
+  .about-header {
+    flex-direction: column;
+    text-align: center;
+    padding: 20px;
+  }
+  
+  .about-footer {
+    grid-template-columns: 1fr;
+  }
+  
+  .version-info {
+    justify-content: center;
+  }
+  
+  .tech-stack {
+    gap: 8px;
+  }
+}

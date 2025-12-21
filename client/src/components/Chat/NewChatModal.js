@@ -14,19 +14,19 @@ const NewChatModal = ({ onClose }) => {
   const { createChat } = useChat();
 
   useEffect(() => {
+    const searchUsers = async () => {
+      try {
+        const response = await api.get(`/users/search?query=${searchQuery}`);
+        setUsers(response.data.users);
+      } catch (error) {
+        console.error('Search users error:', error);
+      }
+    };
+
     if (searchQuery.length > 2) {
       searchUsers();
     }
   }, [searchQuery]);
-
-  const searchUsers = async () => {
-    try {
-      const response = await api.get(`/users/search?query=${searchQuery}`);
-      setUsers(response.data.users);
-    } catch (error) {
-      console.error('Search users error:', error);
-    }
-  };
 
   const toggleUserSelection = (user) => {
     if (selectedUsers.find(u => u._id === user._id)) {

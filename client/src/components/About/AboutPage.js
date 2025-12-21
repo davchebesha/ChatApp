@@ -1,5 +1,5 @@
 import React from 'react';
-import { FiInfo, FiGithub, FiMail, FiGlobe } from 'react-icons/fi';
+import { FiGithub, FiMail, FiGlobe } from 'react-icons/fi';
 import './About.css';
 
 const AboutPage = () => {

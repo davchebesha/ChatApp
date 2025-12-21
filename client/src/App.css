@@ -1,7 +1,25 @@
+/* CSS Variables for theming */
+:root {
+  --color-primary: #667eea;
+  --color-secondary: #764ba2;
+  --color-background: #ffffff;
+  --color-surface: #f8f9fa;
+  --color-text: #333333;
+  --color-textSecondary: #666666;
+  --color-border: #e1e5e9;
+  --color-success: #28a745;
+  --color-warning: #ffc107;
+  --color-error: #dc3545;
+  --color-info: #17a2b8;
+  --app-background: #ffffff;
+}
+
 .App {
   height: 100vh;
   width: 100vw;
   overflow: hidden;
+  background: var(--app-background);
+  color: var(--color-text);
 }
 
 /* Common styles */
@@ -16,44 +34,67 @@
 }
 
 .btn-primary {
-  background-color: #0084ff;
+  background-color: var(--color-primary);
   color: white;
 }
 
 .btn-primary:hover {
-  background-color: #0073e6;
+  background-color: var(--color-secondary);
 }
 
 .btn-secondary {
-  background-color: #e4e6eb;
-  color: #050505;
+  background-color: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
 }
 
 .btn-secondary:hover {
-  background-color: #d8dadf;
+  background-color: var(--color-border);
 }
 
 .btn-danger {
-  background-color: #f02849;
+  background-color: var(--color-error);
   color: white;
 }
 
 .btn-danger:hover {
-  background-color: #d91f3f;
+  opacity: 0.9;
+}
+
+.btn-outline {
+  background-color: transparent;
+  color: var(--color-primary);
+  border: 2px solid var(--color-primary);
+}
+
+.btn-outline:hover {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.btn-large {
+  padding: 15px 30px;
+  font-size: 16px;
+}
+
+.btn-block {
+  width: 100%;
 }
 
 .input {
   padding: 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   font-size: 14px;
   width: 100%;
   transition: border-color 0.3s ease;
+  background: var(--color-background);
+  color: var(--color-text);
 }
 
 .input:focus {
   outline: none;
-  border-color: #0084ff;
+  border-color: var(--color-primary);
 }
 
 .avatar {
@@ -87,17 +128,17 @@
 }
 
 .status-online {
-  background-color: #31a24c;
+  background-color: var(--color-success);
 }
 
 .status-offline {
-  background-color: #8a8d91;
+  background-color: var(--color-textSecondary);
 }
 
 .status-away {
-  background-color: #f7b928;
+  background-color: var(--color-warning);
 }
 
 .status-busy {
-  background-color: #f02849;
+  background-color: var(--color-error);
 }
