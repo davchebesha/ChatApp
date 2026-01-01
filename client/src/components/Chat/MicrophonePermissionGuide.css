@@ -1,0 +1,491 @@
+/* Microphone Permission Guide Styles */
+.mic-permission-guide-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  backdrop-filter: blur(4px);
+}
+
+.mic-permission-guide {
+  background: white;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+}
+
+.guide-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8fafc;
+}
+
+.guide-header h3 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  padding: 8px;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.2s ease;
+}
+
+.close-btn:hover {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.close-btn svg {
+  width: 20px;
+  height: 20px;
+}
+
+.guide-content {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.step-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.step-icon {
+  font-size: 64px;
+  color: #3b82f6;
+  margin-bottom: 20px;
+}
+
+.step-content p {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  line-height: 1.6;
+  color: #4b5563;
+  max-width: 500px;
+}
+
+.browser-instructions {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+  text-align: left;
+  width: 100%;
+  max-width: 500px;
+}
+
+.browser-instructions ol {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.browser-instructions li {
+  margin-bottom: 12px;
+  color: #374151;
+}
+
+.instruction-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fef3c7;
+  border: 1px solid #f59e0b;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 20px 0;
+  text-align: left;
+}
+
+.instruction-note svg {
+  color: #d97706;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.instruction-note p {
+  margin: 0;
+  font-size: 14px;
+  color: #92400e;
+}
+
+.step-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 24px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.primary-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.primary-btn:hover:not(:disabled) {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.primary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.secondary-btn {
+  background: #6b7280;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.secondary-btn:hover {
+  background: #4b5563;
+  transform: translateY(-1px);
+}
+
+.troubleshooting-tips {
+  text-align: left;
+  width: 100%;
+  max-width: 500px;
+}
+
+.troubleshooting-tips h4 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  text-align: center;
+}
+
+.tip-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.tip-item strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.tip-item p {
+  margin: 0;
+  font-size: 13px;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.guide-footer {
+  padding: 20px 24px;
+  border-top: 1px solid #e5e7eb;
+  background: #f8fafc;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.step-indicator {
+  display: flex;
+  gap: 8px;
+}
+
+.step-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #d1d5db;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.step-dot.active {
+  background: #3b82f6;
+  transform: scale(1.2);
+}
+
+.step-dot.completed {
+  background: #10b981;
+}
+
+.navigation-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.nav-btn {
+  background: none;
+  border: 1px solid #d1d5db;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  color: #4b5563;
+  transition: all 0.2s ease;
+}
+
+.nav-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .mic-permission-guide {
+    width: 95%;
+    max-height: 90vh;
+  }
+  
+  .guide-header {
+    padding: 16px 20px;
+  }
+  
+  .guide-header h3 {
+    font-size: 18px;
+  }
+  
+  .guide-content {
+    padding: 20px;
+  }
+  
+  .step-icon {
+    font-size: 48px;
+  }
+  
+  .step-actions {
+    flex-direction: column;
+  }
+  
+  .primary-btn,
+  .secondary-btn {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .guide-footer {
+    flex-direction: column;
+    gap: 16px;
+  }
+}
+/* Enhanced Permission Guide with Navigation */
+.mic-permission-guide.enhanced-guide {
+  background: white;
+  border-radius: 20px;
+  width: 90%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+  animation: slideUp 0.3s ease-out;
+}
+
+/* Enhanced Guide Header */
+.guide-header.enhanced-guide-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.guide-header.enhanced-guide-header .header-left,
+.guide-header.enhanced-guide-header .header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 100px;
+}
+
+.guide-header.enhanced-guide-header .header-left {
+  justify-content: flex-start;
+}
+
+.guide-header.enhanced-guide-header .header-right {
+  justify-content: flex-end;
+}
+
+.guide-header.enhanced-guide-header .header-center {
+  flex: 1;
+  text-align: center;
+}
+
+.guide-header.enhanced-guide-header .header-center h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: white;
+}
+
+/* Enhanced Guide Footer */
+.guide-footer.enhanced-guide-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: #f8fafc;
+  border-top: 1px solid #e5e7eb;
+}
+
+.guide-footer.enhanced-guide-footer .navigation-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.guide-footer.enhanced-guide-footer .nav-btn.next-btn {
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  color: white;
+  border: none;
+}
+
+.guide-footer.enhanced-guide-footer .nav-btn.next-btn:hover {
+  background: linear-gradient(135deg, #1d4ed8, #1e40af);
+}
+
+/* Step Dots Enhancement */
+.step-indicator {
+  display: flex;
+  gap: 8px;
+}
+
+.step-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #d1d5db;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+}
+
+.step-dot:hover {
+  transform: scale(1.1);
+}
+
+.step-dot.active {
+  background: #f59e0b;
+  transform: scale(1.3);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+}
+
+.step-dot.completed {
+  background: #10b981;
+}
+
+.step-dot.completed::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 8px;
+  font-weight: bold;
+}
+
+/* Enhanced Step Actions */
+.step-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+@media (min-width: 640px) {
+  .step-actions {
+    flex-direction: row;
+    justify-content: center;
+  }
+}
+
+/* Mobile Responsive for Guide */
+@media (max-width: 768px) {
+  .mic-permission-guide.enhanced-guide {
+    width: 95%;
+    max-height: 95vh;
+  }
+
+  .guide-header.enhanced-guide-header {
+    padding: 12px 16px;
+  }
+
+  .guide-header.enhanced-guide-header .header-left,
+  .guide-header.enhanced-guide-header .header-right {
+    min-width: 80px;
+  }
+
+  .guide-header.enhanced-guide-header .nav-btn span {
+    display: none;
+  }
+
+  .guide-footer.enhanced-guide-footer {
+    padding: 12px 16px;
+  }
+
+  .guide-footer.enhanced-guide-footer .footer-btn span {
+    display: none;
+  }
+
+  .step-actions {
+    flex-direction: column;
+  }
+}

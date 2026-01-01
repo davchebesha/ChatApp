@@ -1,0 +1,283 @@
+version: '3.8'
+
+networks:
+  nexuschat-network:
+    driver: bridge
+
+volumes:
+  mongodb-data-1:
+  mongodb-data-2:
+  mongodb-data-3:
+  redis-data-1:
+  redis-data-2:
+  redis-data-3:
+  rabbitmq-data:
+
+services:
+  # Load Balancer (Nginx)
+  nginx-lb:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-distributed.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - app-server-1
+      - app-server-2
+      - app-server-3
+    networks:
+      - nexuschat-network
+    restart: unless-stopped
+
+  # MongoDB Replica Set
+  mongodb-primary:
+    image: mongo:7
+    command: mongod --replSet nexuschat-rs --bind_ip_all --port 27017
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data-1:/data/db
+      - ./scripts/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: nexuschat
+    networks:
+      - nexuschat-network
+    restart: unless-stopped
+
+  mongodb-secondary-1:
+    image: mongo:7
+    command: mongod --replSet nexuschat-rs --bind_ip_all --port 27017
+    ports:
+      - "27018:27017"
+    volumes:
+      - mongodb-data-2:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+    networks:
+      - nexuschat-network
+    depends_on:
+      - mongodb-primary
+    restart: unless-stopped
+
+  mongodb-secondary-2:
+    image: mongo:7
+    command: mongod --replSet nexuschat-rs --bind_ip_all --port 27017
+    ports:
+      - "27019:27017"
+    volumes:
+      - mongodb-data-3:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+    networks:
+      - nexuschat-network
+    depends_on:
+      - mongodb-primary
+    restart: unless-stopped
+
+  # Redis Cluster
+  redis-node-1:
+    image: redis:7-alpine
+    command: redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes
+    ports:
+      - "6379:6379"
+      - "16379:16379"
+    volumes:
+      - redis-data-1:/data
+    networks:
+      - nexuschat-network
+    restart: unless-stopped
+
+  redis-node-2:
+    image: redis:7-alpine
+    command: redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes
+    ports:
+      - "6380:6379"
+      - "16380:16379"
+    volumes:
+      - redis-data-2:/data
+    networks:
+      - nexuschat-network
+    restart: unless-stopped
+
+  redis-node-3:
+    image: redis:7-alpine
+    command: redis-server --port 6379 --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes
+    ports:
+      - "6381:6379"
+      - "16381:16379"
+    volumes:
+      - redis-data-3:/data
+    networks:
+      - nexuschat-network
+    restart: unless-stopped
+
+  # Redis Cluster Setup
+  redis-cluster-setup:
+    image: redis:7-alpine
+    command: >
+      sh -c "
+        sleep 10 &&
+        redis-cli --cluster create 
+        redis-node-1:6379 
+        redis-node-2:6379 
+        redis-node-3:6379 
+        --cluster-replicas 0 --cluster-yes
+      "
+    depends_on:
+      - redis-node-1
+      - redis-node-2
+      - redis-node-3
+    networks:
+      - nexuschat-network
+
+  # RabbitMQ Cluster
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    hostname: rabbitmq-node-1
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: nexus
+      RABBITMQ_DEFAULT_PASS: nexus123
+      RABBITMQ_ERLANG_COOKIE: nexuschat-cookie
+    networks:
+      - nexuschat-network
+    restart: unless-stopped
+
+  # Application Servers
+  app-server-1:
+    build: 
+      context: ./server
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 5001
+      SERVER_ID: server-1
+      CLUSTER_MODE: "true"
+      MONGODB_URI: mongodb://admin:password123@mongodb-primary:27017,mongodb-secondary-1:27017,mongodb-secondary-2:27017/nexuschat?replicaSet=nexuschat-rs&authSource=admin
+      REDIS_CLUSTER_NODES: redis-node-1:6379,redis-node-2:6379,redis-node-3:6379
+      RABBITMQ_URL: amqp://nexus:nexus123@rabbitmq:5672
+      JWT_SECRET: distributed-jwt-secret-key-change-in-production
+      CLIENT_URL: http://localhost
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      - mongodb-primary
+      - redis-node-1
+      - rabbitmq
+    networks:
+      - nexuschat-network
+    restart: unless-stopped
+
+  app-server-2:
+    build: 
+      context: ./server
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 5001
+      SERVER_ID: server-2
+      CLUSTER_MODE: "true"
+      MONGODB_URI: mongodb://admin:password123@mongodb-primary:27017,mongodb-secondary-1:27017,mongodb-secondary-2:27017/nexuschat?replicaSet=nexuschat-rs&authSource=admin
+      REDIS_CLUSTER_NODES: redis-node-1:6379,redis-node-2:6379,redis-node-3:6379
+      RABBITMQ_URL: amqp://nexus:nexus123@rabbitmq:5672
+      JWT_SECRET: distributed-jwt-secret-key-change-in-production
+      CLIENT_URL: http://localhost
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      - mongodb-primary
+      - redis-node-1
+      - rabbitmq
+    networks:
+      - nexuschat-network
+    restart: unless-stopped
+
+  app-server-3:
+    build: 
+      context: ./server
+      dockerfile: Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 5001
+      SERVER_ID: server-3
+      CLUSTER_MODE: "true"
+      MONGODB_URI: mongodb://admin:password123@mongodb-primary:27017,mongodb-secondary-1:27017,mongodb-secondary-2:27017/nexuschat?replicaSet=nexuschat-rs&authSource=admin
+      REDIS_CLUSTER_NODES: redis-node-1:6379,redis-node-2:6379,redis-node-3:6379
+      RABBITMQ_URL: amqp://nexus:nexus123@rabbitmq:5672
+      JWT_SECRET: distributed-jwt-secret-key-change-in-production
+      CLIENT_URL: http://localhost
+    volumes:
+      - ./uploads:/app/uploads
+    depends_on:
+      - mongodb-primary
+      - redis-node-1
+      - rabbitmq
+    networks:
+      - nexuschat-network
+    restart: unless-stopped
+
+  # Client Application
+  client-app:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    environment:
+      REACT_APP_API_URL: http://localhost
+      REACT_APP_WS_URL: http://localhost
+    depends_on:
+      - nginx-lb
+    networks:
+      - nexuschat-network
+    restart: unless-stopped
+
+  # Health Check Service
+  health-monitor:
+    build:
+      context: ./monitoring
+      dockerfile: Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      MONGODB_URI: mongodb://admin:password123@mongodb-primary:27017,mongodb-secondary-1:27017,mongodb-secondary-2:27017/nexuschat?replicaSet=nexuschat-rs&authSource=admin
+      REDIS_CLUSTER_NODES: redis-node-1:6379,redis-node-2:6379,redis-node-3:6379
+      RABBITMQ_URL: amqp://nexus:nexus123@rabbitmq:5672
+      APP_SERVERS: app-server-1:5001,app-server-2:5001,app-server-3:5001
+    depends_on:
+      - app-server-1
+      - app-server-2
+      - app-server-3
+    networks:
+      - nexuschat-network
+    restart: unless-stopped
+
+  # TURN Server for WebRTC
+  coturn:
+    image: coturn/coturn:latest
+    ports:
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
+      - "49152-65535:49152-65535/udp"
+    command: >
+      -n
+      --log-file=stdout
+      --min-port=49152
+      --max-port=65535
+      --fingerprint
+      --lt-cred-mech
+      --realm=nexuschat.local
+      --server-name=nexuschat.local
+      --static-auth-secret=nexuschat-turn-secret
+      --user=nexus:nexus123
+    networks:
+      - nexuschat-network
+    restart: unless-stopped

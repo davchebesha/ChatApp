@@ -1,17 +1,25 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import ChatWindow from './ChatWindow';
 import ChatInfo from './ChatInfo';
 import ResizeHandle from './ResizeHandle';
 import OnboardingTrigger from '../Navigation/OnboardingTrigger';
+import NotificationBadge from '../Notifications/NotificationBadge';
 import useDualSidebarManager from './DualSidebarManager';
 import { useChat } from '../../contexts/ChatContext';
-import { FiInfo, FiUsers, FiSettings, FiX, FiMenu } from 'react-icons/fi';
+import { useNotification } from '../../contexts/NotificationContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { FiInfo, FiUsers, FiSettings, FiX, FiMenu, FiBell } from 'react-icons/fi';
 import Logo from '../Common/Logo';
+import Avatar from '../Common/Avatar';
 import './Chat.css';
 
 const ChatLayout = () => {
   const { selectedChat } = useChat();
+  const { unreadCount } = useNotification();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [showChatInfo, setShowChatInfo] = useState(false);
   
   // CRITICAL: Use the enhanced independent dual sidebar manager
@@ -28,6 +36,36 @@ const ChatLayout = () => {
     getMainChatMargins
   } = useDualSidebarManager();
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      // Settings shortcut (Ctrl/Cmd + ,)
+      if ((event.ctrlKey || event.metaKey) && event.key === ',') {
+        event.preventDefault();
+        navigate('/settings');
+      }
+      
+      // Toggle sidebar (Ctrl/Cmd + B)
+      if ((event.ctrlKey || event.metaKey) && event.key === 'b') {
+        event.preventDefault();
+        toggleLeftSidebar();
+      }
+      
+      // Toggle chat info (Ctrl/Cmd + I)
+      if ((event.ctrlKey || event.metaKey) && event.key === 'i' && selectedChat) {
+        event.preventDefault();
+        if (showChatInfo) {
+          handleCloseChatInfo();
+        } else {
+          handleShowChatInfo();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [navigate, toggleLeftSidebar, selectedChat, showChatInfo]);
+
   // CRITICAL: Auto-show chat info for group chats with Telegram-style behavior
   const handleShowChatInfo = () => {
     showRightSidebar(); // This will handle mobile sidebar switching automatically
@@ -37,6 +75,10 @@ const ChatLayout = () => {
   const handleCloseChatInfo = () => {
     setShowChatInfo(false);
     hideRightSidebar();
+  };
+
+  const handleSettingsClick = () => {
+    navigate('/settings');
   };
 
   const mainContent = selectedChat ? (
@@ -85,7 +127,7 @@ const ChatLayout = () => {
             <FiUsers />
             Start New Chat
           </button>
-          <button className="btn btn-outline">
+          <button className="btn btn-outline" onClick={handleSettingsClick}>
             <FiSettings />
             Settings
           </button>
@@ -173,7 +215,7 @@ const ChatLayout = () => {
                 <img 
                   src={selectedChat.type === 'group' 
                     ? (selectedChat.avatar || '/default-group.png')
-                    : (selectedChat.participants?.find(p => p._id !== selectedChat.currentUserId)?.avatar || '/default-avatar.png')
+                    : (selectedChat.participants?.find(p => p._id !== selectedChat.currentUserId)?.avatar || '/default-avatar.svg')
                   } 
                   alt="Chat Avatar" 
                   className="avatar avatar-sm"
@@ -196,17 +238,52 @@ const ChatLayout = () => {
             )}
           </div>
           
-          {selectedChat && (
-            <div className="chat-header-actions">
+          <div className="chat-header-actions">
+            {/* Notification Badge for Settings */}
+            <NotificationBadge 
+              count={unreadCount} 
+              variant="error"
+              size="sm"
+              onClick={() => navigate('/notifications')}
+            >
+              <button 
+                className="header-action-btn settings-btn"
+                onClick={handleSettingsClick}
+                title="Settings (Ctrl+,)"
+              >
+                <FiSettings />
+              </button>
+            </NotificationBadge>
+
+            {/* User Avatar with Notification Badge */}
+            {user && (
+              <NotificationBadge 
+                count={unreadCount} 
+                variant="primary"
+                size="sm"
+              >
+                <Avatar 
+                  src={user.avatar}
+                  alt={user.username}
+                  size="sm"
+                  username={user.username}
+                  className="user-avatar"
+                  onClick={() => navigate('/profile')}
+                  style={{ cursor: 'pointer' }}
+                />
+              </NotificationBadge>
+            )}
+
+            {selectedChat && (
               <button 
                 className={`header-action-btn ${showChatInfo ? 'active' : ''}`}
                 onClick={showChatInfo ? handleCloseChatInfo : handleShowChatInfo}
-                title={showChatInfo ? 'Hide chat info' : 'Show chat info'}
+                title={showChatInfo ? 'Hide chat info (Ctrl+I)' : 'Show chat info (Ctrl+I)'}
               >
                 {showChatInfo ? <FiX /> : <FiInfo />}
               </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* CRITICAL: Chat Content - Unaffected by Sidebar State Changes */}

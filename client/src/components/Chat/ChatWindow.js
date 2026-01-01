@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useChat } from '../../contexts/ChatContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { FiSend, FiPaperclip, FiPhone, FiVideo, FiMoreVertical, FiX, FiMic, FiImage, FiSettings } from 'react-icons/fi';
+import { FiPhone, FiVideo, FiMoreVertical, FiX, FiSettings, FiChevronDown } from 'react-icons/fi';
 import Message from './Message';
 import VideoCall from './VideoCall';
 import ChatSettings from './ChatSettings';
+import RichMessageInput from './RichMessageInput';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
 import './Chat.css';
@@ -12,96 +13,99 @@ import './Chat.css';
 const ChatWindow = () => {
   const { selectedChat, messages, sendMessage, sendTyping, onlineUsers } = useChat();
   const { user } = useAuth();
-  const [messageInput, setMessageInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [showVideoCall, setShowVideoCall] = useState(false);
   const [showVoiceCall, setShowVoiceCall] = useState(false);
   const [showChatSettings, setShowChatSettings] = useState(false);
   const [replyingTo, setReplyingTo] = useState(null);
-  const [uploadingFile, setUploadingFile] = useState(false);
-  const [showAttachMenu, setShowAttachMenu] = useState(false);
+  const [forwardingMessage, setForwardingMessage] = useState(null);
   const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
   const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
   const typingTimeoutRef = useRef(null);
-  const fileInputRef = useRef(null);
 
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  // Enhanced scroll detection for scroll-to-bottom button
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
 
-  const handleInputChange = (e) => {
-    setMessageInput(e.target.value);
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
+      setShowScrollButton(!isNearBottom && messages.length > 0);
+    };
 
-    if (!isTyping) {
-      setIsTyping(true);
-      sendTyping(true);
-    }
+    container.addEventListener('scroll', handleScroll);
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, [messages.length]);
 
-    clearTimeout(typingTimeoutRef.current);
-    typingTimeoutRef.current = setTimeout(() => {
-      setIsTyping(false);
-      sendTyping(false);
-    }, 1000);
-  };
-
-  const handleSendMessage = (e) => {
-    e.preventDefault();
-    
-    if (!messageInput.trim()) return;
-
-    sendMessage(messageInput.trim(), 'text', replyingTo?._id);
-    setMessageInput('');
-    setReplyingTo(null);
-    setIsTyping(false);
-    sendTyping(false);
-  };
-
-  const handleFileUpload = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    // Validate file size (10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('File size must be less than 10MB');
-      return;
-    }
-
-    setUploadingFile(true);
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('chatId', selectedChat._id);
-    formData.append('type', file.type.startsWith('image/') ? 'image' : 'file');
-
-    try {
-      await api.post('/messages', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
+  const scrollToBottom = (smooth = true) => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ 
+        behavior: smooth ? 'smooth' : 'auto',
+        block: 'end'
       });
-      toast.success('File uploaded successfully');
+    }
+  };
+
+  const handleScrollToBottom = () => {
+    scrollToBottom(true);
+    setShowScrollButton(false);
+  };
+
+  const handleSendMessage = (content, replyTo = null) => {
+    if (content.trim()) {
+      sendMessage(content.trim(), replyTo);
+      setReplyingTo(null);
+    }
+  };
+
+  const handleSendFile = async (file, fileType, metadata = {}) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('chatId', selectedChat._id);
+      formData.append('type', fileType);
+      
+      if (metadata) {
+        formData.append('metadata', JSON.stringify(metadata));
+      }
+
+      const response = await api.post('/files/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.data.success) {
+        // File uploaded successfully, message will be sent via socket
+        toast.success('File sent successfully!');
+      }
     } catch (error) {
       console.error('File upload error:', error);
-      toast.error('Failed to upload file');
-    } finally {
-      setUploadingFile(false);
-      setShowAttachMenu(false);
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      toast.error('Failed to send file');
     }
   };
 
   const handleReply = (message) => {
     setReplyingTo(message);
+    setShowMoreMenu(false);
   };
 
   const handleForward = (message) => {
-    // Forward functionality - you can enhance this
-    toast.info('Forward feature - select a chat to forward to');
+    setForwardingMessage(message);
+    // TODO: Implement forward modal
+    toast.info('Forward feature coming soon!');
+    setShowMoreMenu(false);
+  };
+
+  const handleCancelReply = () => {
+    setReplyingTo(null);
   };
 
   const handleVoiceCall = () => {
@@ -124,7 +128,7 @@ const ChatWindow = () => {
     
     if (selectedChat.type === 'private') {
       const otherUser = selectedChat.participants.find(p => p._id !== user.id);
-      return otherUser?.avatar || '/default-avatar.png';
+      return otherUser?.avatar || '/default-avatar.svg';
     }
     return selectedChat.avatar || '/default-group.png';
   };
@@ -187,7 +191,7 @@ const ChatWindow = () => {
         </div>
       </div>
 
-      <div className="messages-container">
+      <div className="messages-container" ref={messagesContainerRef}>
         {messages.map(message => (
           <Message 
             key={message._id} 
@@ -197,6 +201,16 @@ const ChatWindow = () => {
           />
         ))}
         <div ref={messagesEndRef} />
+        
+        {/* Scroll to bottom button */}
+        <button 
+          className={`scroll-to-bottom ${showScrollButton ? 'visible' : ''}`}
+          onClick={handleScrollToBottom}
+          title="Scroll to bottom"
+          aria-label="Scroll to bottom"
+        >
+          <FiChevronDown />
+        </button>
       </div>
 
       {replyingTo && (
@@ -211,65 +225,12 @@ const ChatWindow = () => {
         </div>
       )}
 
-      <div className="message-input-container">
-        <form onSubmit={handleSendMessage} className="message-input-form">
-          <div className="attach-menu-wrapper">
-            <button 
-              type="button" 
-              className="icon-btn" 
-              title="Attach File"
-              onClick={() => setShowAttachMenu(!showAttachMenu)}
-            >
-              <FiPaperclip />
-            </button>
-            
-            {showAttachMenu && (
-              <div className="attach-menu">
-                <button 
-                  type="button" 
-                  className="attach-menu-item"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <FiImage /> Photo/Video
-                </button>
-                <button 
-                  type="button" 
-                  className="attach-menu-item"
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <FiPaperclip /> Document
-                </button>
-                <button 
-                  type="button" 
-                  className="attach-menu-item"
-                >
-                  <FiMic /> Audio
-                </button>
-              </div>
-            )}
-          </div>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            style={{ display: 'none' }}
-            onChange={handleFileUpload}
-            accept="image/*,video/*,.pdf,.doc,.docx,.txt"
-          />
-
-          <input
-            type="text"
-            className="message-input"
-            placeholder={uploadingFile ? "Uploading..." : "Type a message..."}
-            value={messageInput}
-            onChange={handleInputChange}
-            disabled={uploadingFile}
-          />
-          <button type="submit" className="icon-btn send-btn" disabled={!messageInput.trim() || uploadingFile}>
-            <FiSend />
-          </button>
-        </form>
-      </div>
+      <RichMessageInput
+        onSendMessage={handleSendMessage}
+        onSendFile={handleSendFile}
+        replyTo={replyingTo}
+        onCancelReply={handleCancelReply}
+      />
 
       {showVideoCall && (
         <VideoCall

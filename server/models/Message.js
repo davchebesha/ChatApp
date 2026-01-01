@@ -26,6 +26,10 @@ const messageSchema = new mongoose.Schema({
     size: Number,
     mimeType: String
   },
+  metadata: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
   replyTo: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Message'

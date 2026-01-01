@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FiUser, FiMail, FiPhone, FiCamera, FiEdit3, FiSave, FiX } from 'react-icons/fi';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
+import Avatar from '../Common/Avatar';
 import './ProfileSettings.css';
 
 const ProfileSettings = () => {
@@ -89,9 +90,11 @@ const ProfileSettings = () => {
         <div className="avatar-section">
           <div className="avatar-container">
             <div className="avatar-wrapper">
-              <img 
-                src={previewAvatar || avatar || '/default-avatar.png'} 
+              <Avatar 
+                src={previewAvatar || avatar}
                 alt="Profile Avatar"
+                size="xl"
+                username={profileData.username}
                 className="profile-avatar"
               />
               {isEditing && (

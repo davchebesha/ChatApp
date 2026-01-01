@@ -1,175 +1,321 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useSocket } from '../../contexts/SocketContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { FiMic, FiMicOff, FiVideo, FiVideoOff, FiMonitor, FiX } from 'react-icons/fi';
-import Peer from 'simple-peer';
+import { FiMic, FiMicOff, FiVideo, FiVideoOff, FiMonitor, FiX, FiPhone } from 'react-icons/fi';
 import './Chat.css';
 
 const VideoCall = ({ chat, onClose, isVoiceOnly = false }) => {
   const { socket } = useSocket();
   const { user } = useAuth();
-  const [stream, setStream] = useState(null);
+  const [localStream, setLocalStream] = useState(null);
   const [remoteStream, setRemoteStream] = useState(null);
   const [audioEnabled, setAudioEnabled] = useState(true);
-  const [videoEnabled, setVideoEnabled] = useState(true);
+  const [videoEnabled, setVideoEnabled] = useState(!isVoiceOnly);
   const [screenSharing, setScreenSharing] = useState(false);
   const [permissionError, setPermissionError] = useState(null);
   const [isConnecting, setIsConnecting] = useState(true);
+  const [callStatus, setCallStatus] = useState('initializing');
+  const [callId, setCallId] = useState(null);
   
   const localVideoRef = useRef();
   const remoteVideoRef = useRef();
-  const peerRef = useRef();
+  const peerConnectionRef = useRef();
+  const iceCandidatesQueue = useRef([]);
+
+  // WebRTC configuration with STUN servers
+  const rtcConfiguration = {
+    iceServers: [
+      { urls: 'stun:stun.l.google.com:19302' },
+      { urls: 'stun:stun1.l.google.com:19302' },
+      { urls: 'stun:stun2.l.google.com:19302' },
+      { urls: 'stun:stun3.l.google.com:19302' },
+      { urls: 'stun:stun4.l.google.com:19302' }
+    ]
+  };
 
   useEffect(() => {
-    startCall();
+    initializeCall();
 
     return () => {
-      endCall();
+      cleanup();
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const startCall = async () => {
+  const initializeCall = async () => {
     try {
       setIsConnecting(true);
+      setCallStatus('requesting_permissions');
       setPermissionError(null);
 
-      // Request media permissions
+      // Get user media
       const constraints = {
         audio: true,
-        video: isVoiceOnly ? false : true
+        video: !isVoiceOnly
       };
 
-      const mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
-
-      setStream(mediaStream);
-      setIsConnecting(false);
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      setLocalStream(stream);
       
       if (localVideoRef.current && !isVoiceOnly) {
-        localVideoRef.current.srcObject = mediaStream;
+        localVideoRef.current.srcObject = stream;
       }
 
-      // Get the other user
-      const otherUser = chat.participants.find(p => p._id !== user.id);
-      
       // Create peer connection
-      const peer = new Peer({
-        initiator: true,
-        trickle: false,
-        stream: mediaStream
+      const peerConnection = new RTCPeerConnection(rtcConfiguration);
+      peerConnectionRef.current = peerConnection;
+
+      // Add local stream to peer connection
+      stream.getTracks().forEach(track => {
+        peerConnection.addTrack(track, stream);
       });
 
-      peer.on('signal', (data) => {
-        socket.emit('call_user', {
-          to: otherUser._id,
-          from: user.id,
-          offer: data,
-          callType: isVoiceOnly ? 'voice' : 'video'
-        });
-      });
-
-      peer.on('stream', (remoteStream) => {
+      // Handle remote stream
+      peerConnection.ontrack = (event) => {
+        const [remoteStream] = event.streams;
         setRemoteStream(remoteStream);
-        if (remoteVideoRef.current && !isVoiceOnly) {
+        if (remoteVideoRef.current) {
           remoteVideoRef.current.srcObject = remoteStream;
         }
-      });
+        setCallStatus('connected');
+      };
 
-      peerRef.current = peer;
+      // Handle ICE candidates
+      peerConnection.onicecandidate = (event) => {
+        if (event.candidate) {
+          const otherUser = chat.participants.find(p => p._id !== user.id);
+          socket.emit('ice_candidate', {
+            to: otherUser._id,
+            candidate: event.candidate
+          });
+        }
+      };
 
-      // Listen for call acceptance
-      socket.on('call_accepted', ({ answer }) => {
-        peer.signal(answer);
-      });
+      // Handle connection state changes
+      peerConnection.onconnectionstatechange = () => {
+        console.log('Connection state:', peerConnection.connectionState);
+        if (peerConnection.connectionState === 'connected') {
+          setCallStatus('connected');
+          setIsConnecting(false);
+        } else if (peerConnection.connectionState === 'disconnected') {
+          setCallStatus('disconnected');
+        } else if (peerConnection.connectionState === 'failed') {
+          setCallStatus('failed');
+          setPermissionError('Connection failed. Please try again.');
+        }
+      };
 
-      socket.on('call_rejected', () => {
-        setPermissionError('Call was rejected by the other user');
-        setTimeout(() => onClose(), 2000);
-      });
+      // Setup socket listeners
+      setupSocketListeners(peerConnection);
 
-      socket.on('call_ended', () => {
-        onClose();
-      });
+      // Start the call
+      await initiateCall(peerConnection);
 
     } catch (error) {
-      console.error('Error starting call:', error);
-      setIsConnecting(false);
-      
-      // Provide specific error messages based on error type
-      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
-        setPermissionError(
-          'Camera/microphone access denied. Please allow permissions in your browser:\n\n' +
-          '1. Click the lock icon (🔒) in the address bar\n' +
-          '2. Allow Camera and Microphone\n' +
-          '3. Refresh the page and try again'
-        );
-      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
-        setPermissionError(
-          'No camera or microphone found. Please connect a device and try again.'
-        );
-      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
-        setPermissionError(
-          'Camera/microphone is already in use by another application. Please close other apps and try again.'
-        );
-      } else if (error.name === 'OverconstrainedError') {
-        setPermissionError(
-          'Camera/microphone does not meet requirements. Try using a different device.'
-        );
-      } else if (error.name === 'SecurityError') {
-        setPermissionError(
-          'Security error: Please make sure you are using HTTPS or localhost.'
-        );
-      } else {
-        setPermissionError(
-          'Could not access camera/microphone. Error: ' + error.message
-        );
-      }
+      console.error('Error initializing call:', error);
+      handleMediaError(error);
     }
   };
 
-  const endCall = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
-    
-    if (peerRef.current) {
-      peerRef.current.destroy();
-    }
-
-    const otherUser = chat.participants.find(p => p._id !== user.id);
-    socket.emit('end_call', {
-      to: otherUser._id,
-      callId: `${user.id}-${otherUser._id}`
+  const setupSocketListeners = (peerConnection) => {
+    // Handle incoming call
+    socket.on('incoming_call', async ({ callId: incomingCallId, from, offer }) => {
+      setCallId(incomingCallId);
+      setCallStatus('incoming');
+      
+      // Auto-accept for now (you can add UI for accept/reject)
+      await handleIncomingCall(peerConnection, offer, from, incomingCallId);
     });
 
+    // Handle call accepted
+    socket.on('call_accepted', async ({ answer }) => {
+      setCallStatus('connecting');
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+      
+      // Process queued ICE candidates
+      while (iceCandidatesQueue.current.length > 0) {
+        const candidate = iceCandidatesQueue.current.shift();
+        await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+      }
+    });
+
+    // Handle call rejected
+    socket.on('call_rejected', () => {
+      setCallStatus('rejected');
+      setPermissionError('Call was rejected by the other user');
+      setTimeout(() => onClose(), 2000);
+    });
+
+    // Handle call ended
+    socket.on('call_ended', () => {
+      setCallStatus('ended');
+      onClose();
+    });
+
+    // Handle ICE candidates
+    socket.on('ice_candidate', async ({ candidate }) => {
+      if (peerConnection.remoteDescription) {
+        await peerConnection.addIceCandidate(new RTCIceCandidate(candidate));
+      } else {
+        iceCandidatesQueue.current.push(candidate);
+      }
+    });
+
+    // Handle offer
+    socket.on('offer', async ({ from, offer }) => {
+      await handleIncomingCall(peerConnection, offer, from);
+    });
+
+    // Handle answer
+    socket.on('answer', async ({ answer }) => {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(answer));
+    });
+
+    // Handle peer audio/video toggles
+    socket.on('peer_audio_toggle', ({ enabled }) => {
+      console.log('Peer audio toggled:', enabled);
+    });
+
+    socket.on('peer_video_toggle', ({ enabled }) => {
+      console.log('Peer video toggled:', enabled);
+    });
+  };
+
+  const initiateCall = async (peerConnection) => {
+    try {
+      const otherUser = chat.participants.find(p => p._id !== user.id);
+      
+      // Create offer
+      const offer = await peerConnection.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: !isVoiceOnly
+      });
+      
+      await peerConnection.setLocalDescription(offer);
+      
+      // Send call request
+      socket.emit('call_user', {
+        to: otherUser._id,
+        from: user.id,
+        offer: offer,
+        callType: isVoiceOnly ? 'voice' : 'video'
+      });
+      
+      setCallStatus('calling');
+      
+    } catch (error) {
+      console.error('Error initiating call:', error);
+      setPermissionError('Failed to initiate call: ' + error.message);
+    }
+  };
+
+  const handleIncomingCall = async (peerConnection, offer, from, incomingCallId) => {
+    try {
+      await peerConnection.setRemoteDescription(new RTCSessionDescription(offer));
+      
+      const answer = await peerConnection.createAnswer();
+      await peerConnection.setLocalDescription(answer);
+      
+      socket.emit('accept_call', {
+        callId: incomingCallId,
+        answer: answer,
+        to: from
+      });
+      
+      setCallStatus('connecting');
+      
+    } catch (error) {
+      console.error('Error handling incoming call:', error);
+      socket.emit('reject_call', {
+        callId: incomingCallId,
+        to: from
+      });
+    }
+  };
+
+  const handleMediaError = (error) => {
+    setIsConnecting(false);
+    
+    if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+      setPermissionError(
+        'Camera/microphone access denied. Please allow permissions and try again.'
+      );
+    } else if (error.name === 'NotFoundError') {
+      setPermissionError(
+        'No camera or microphone found. Please connect a device and try again.'
+      );
+    } else if (error.name === 'NotReadableError') {
+      setPermissionError(
+        'Camera/microphone is already in use. Please close other apps and try again.'
+      );
+    } else {
+      setPermissionError(
+        'Could not access camera/microphone: ' + error.message
+      );
+    }
+  };
+
+  const cleanup = () => {
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+    }
+    
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+    }
+
+    // Remove socket listeners
+    socket.off('incoming_call');
+    socket.off('call_accepted');
+    socket.off('call_rejected');
+    socket.off('call_ended');
+    socket.off('ice_candidate');
+    socket.off('offer');
+    socket.off('answer');
+    socket.off('peer_audio_toggle');
+    socket.off('peer_video_toggle');
+  };
+
+  const endCall = () => {
+    const otherUser = chat.participants.find(p => p._id !== user.id);
+    
+    socket.emit('end_call', {
+      callId: callId || `${user.id}-${otherUser._id}`,
+      to: otherUser._id
+    });
+
+    cleanup();
     onClose();
   };
 
   const toggleAudio = () => {
-    if (stream) {
-      const audioTrack = stream.getAudioTracks()[0];
-      audioTrack.enabled = !audioTrack.enabled;
-      setAudioEnabled(audioTrack.enabled);
+    if (localStream) {
+      const audioTrack = localStream.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setAudioEnabled(audioTrack.enabled);
 
-      const otherUser = chat.participants.find(p => p._id !== user.id);
-      socket.emit('toggle_audio', {
-        to: otherUser._id,
-        enabled: audioTrack.enabled
-      });
+        const otherUser = chat.participants.find(p => p._id !== user.id);
+        socket.emit('toggle_audio', {
+          to: otherUser._id,
+          enabled: audioTrack.enabled
+        });
+      }
     }
   };
 
   const toggleVideo = () => {
-    if (stream) {
-      const videoTrack = stream.getVideoTracks()[0];
-      videoTrack.enabled = !videoTrack.enabled;
-      setVideoEnabled(videoTrack.enabled);
+    if (localStream && !isVoiceOnly) {
+      const videoTrack = localStream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setVideoEnabled(videoTrack.enabled);
 
-      const otherUser = chat.participants.find(p => p._id !== user.id);
-      socket.emit('toggle_video', {
-        to: otherUser._id,
-        enabled: videoTrack.enabled
-      });
+        const otherUser = chat.participants.find(p => p._id !== user.id);
+        socket.emit('toggle_video', {
+          to: otherUser._id,
+          enabled: videoTrack.enabled
+        });
+      }
     }
   };
 
@@ -177,15 +323,20 @@ const VideoCall = ({ chat, onClose, isVoiceOnly = false }) => {
     try {
       if (!screenSharing) {
         const screenStream = await navigator.mediaDevices.getDisplayMedia({
-          video: true
+          video: true,
+          audio: true
         });
 
-        const screenTrack = screenStream.getVideoTracks()[0];
-        const sender = peerRef.current.streams[0].getVideoTracks()[0];
+        const videoTrack = screenStream.getVideoTracks()[0];
+        const sender = peerConnectionRef.current.getSenders().find(s => 
+          s.track && s.track.kind === 'video'
+        );
         
-        peerRef.current.replaceTrack(sender, screenTrack, stream);
+        if (sender) {
+          await sender.replaceTrack(videoTrack);
+        }
         
-        screenTrack.onended = () => {
+        videoTrack.onended = () => {
           toggleScreenShare();
         };
 
@@ -193,11 +344,17 @@ const VideoCall = ({ chat, onClose, isVoiceOnly = false }) => {
 
         const otherUser = chat.participants.find(p => p._id !== user.id);
         socket.emit('start_screen_share', { to: otherUser._id });
-      } else {
-        const videoTrack = stream.getVideoTracks()[0];
-        const sender = peerRef.current.streams[0].getVideoTracks()[0];
         
-        peerRef.current.replaceTrack(sender, videoTrack, stream);
+      } else {
+        const videoTrack = localStream.getVideoTracks()[0];
+        const sender = peerConnectionRef.current.getSenders().find(s => 
+          s.track && s.track.kind === 'video'
+        );
+        
+        if (sender && videoTrack) {
+          await sender.replaceTrack(videoTrack);
+        }
+        
         setScreenSharing(false);
 
         const otherUser = chat.participants.find(p => p._id !== user.id);
@@ -205,6 +362,22 @@ const VideoCall = ({ chat, onClose, isVoiceOnly = false }) => {
       }
     } catch (error) {
       console.error('Screen share error:', error);
+    }
+  };
+
+  const getCallStatusText = () => {
+    switch (callStatus) {
+      case 'initializing': return 'Initializing...';
+      case 'requesting_permissions': return 'Requesting permissions...';
+      case 'calling': return 'Calling...';
+      case 'incoming': return 'Incoming call...';
+      case 'connecting': return 'Connecting...';
+      case 'connected': return 'Connected';
+      case 'disconnected': return 'Disconnected';
+      case 'failed': return 'Connection failed';
+      case 'rejected': return 'Call rejected';
+      case 'ended': return 'Call ended';
+      default: return 'Unknown status';
     }
   };
 
@@ -219,17 +392,13 @@ const VideoCall = ({ chat, onClose, isVoiceOnly = false }) => {
               <div className="error-instructions">
                 <h3>How to fix this:</h3>
                 <ol>
-                  <li>Click the <strong>lock icon (🔒)</strong> or <strong>camera icon</strong> in your browser's address bar</li>
+                  <li>Click the <strong>lock icon (🔒)</strong> in your browser's address bar</li>
                   <li>Select <strong>"Allow"</strong> for Camera and Microphone</li>
-                  <li>Click <strong>"Retry"</strong> below or refresh the page</li>
+                  <li>Click <strong>"Retry"</strong> below</li>
                 </ol>
-                <p className="browser-note">
-                  <strong>Note:</strong> If you're using Chrome, you can also go to:<br/>
-                  Settings → Privacy and security → Site Settings → Camera/Microphone
-                </p>
               </div>
               <div className="error-actions">
-                <button className="retry-btn" onClick={startCall}>
+                <button className="retry-btn" onClick={initializeCall}>
                   🔄 Retry
                 </button>
                 <button className="close-btn" onClick={onClose}>
@@ -238,41 +407,50 @@ const VideoCall = ({ chat, onClose, isVoiceOnly = false }) => {
               </div>
             </div>
           </div>
-        ) : isConnecting ? (
-          <div className="connecting-container">
-            <div className="connecting-spinner"></div>
-            <p>Requesting camera and microphone access...</p>
-            <p className="connecting-hint">Please allow permissions when prompted</p>
-          </div>
         ) : (
           <>
-            {!isVoiceOnly && (
-              <div className="remote-video-container">
-                <video ref={remoteVideoRef} autoPlay playsInline className="remote-video" />
-                {!remoteStream && (
-                  <div className="waiting-message">
-                    <p>Waiting for other user to join...</p>
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="call-header">
+              <h3>{chat.participants.find(p => p._id !== user.id)?.username}</h3>
+              <p className="call-status">{getCallStatusText()}</p>
+            </div>
 
-            {!isVoiceOnly && (
-              <div className="local-video-container">
-                <video ref={localVideoRef} autoPlay playsInline muted className="local-video" />
-              </div>
-            )}
+            {!isVoiceOnly ? (
+              <div className="video-container">
+                <div className="remote-video-wrapper">
+                  <video 
+                    ref={remoteVideoRef} 
+                    autoPlay 
+                    playsInline 
+                    className="remote-video"
+                  />
+                  {!remoteStream && (
+                    <div className="waiting-message">
+                      <div className="avatar-placeholder">
+                        {chat.participants.find(p => p._id !== user.id)?.username?.charAt(0).toUpperCase()}
+                      </div>
+                      <p>Waiting for response...</p>
+                    </div>
+                  )}
+                </div>
 
-            {isVoiceOnly && (
+                <div className="local-video-wrapper">
+                  <video 
+                    ref={localVideoRef} 
+                    autoPlay 
+                    playsInline 
+                    muted 
+                    className="local-video"
+                  />
+                </div>
+              </div>
+            ) : (
               <div className="voice-call-container">
                 <div className="voice-call-avatar">
-                  <div className="avatar-placeholder">
+                  <div className="avatar-placeholder large">
                     {chat.participants.find(p => p._id !== user.id)?.username?.charAt(0).toUpperCase()}
                   </div>
                   <h3>{chat.participants.find(p => p._id !== user.id)?.username}</h3>
-                  <p className="call-status">
-                    {remoteStream ? 'Connected' : 'Calling...'}
-                  </p>
+                  <p className="call-duration">{getCallStatusText()}</p>
                 </div>
               </div>
             )}
@@ -311,7 +489,7 @@ const VideoCall = ({ chat, onClose, isVoiceOnly = false }) => {
                 onClick={endCall}
                 title="End call"
               >
-                <FiX />
+                {isVoiceOnly ? <FiPhone /> : <FiX />}
               </button>
             </div>
           </>

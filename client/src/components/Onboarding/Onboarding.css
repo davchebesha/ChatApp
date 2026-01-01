@@ -1,14 +1,16 @@
-/* Onboarding Styles */
+/* Onboarding Styles - Fixed for Taskbar Overlap */
 .onboarding-welcome,
 .onboarding-profile,
 .onboarding-preferences,
 .onboarding-complete {
-  min-height: 100vh;
+  min-height: calc(100vh - 80px); /* Account for taskbar */
   display: flex;
   align-items: center;
   justify-content: center;
   background: var(--background-gradient);
-  padding: 2rem;
+  padding: 2rem 2rem 6rem 2rem; /* Extra bottom padding for taskbar safety */
+  scroll-behavior: smooth;
+  overflow-y: auto;
 }
 
 .onboarding-container,

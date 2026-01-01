@@ -17,131 +17,554 @@
   --app-background: var(--nexus-background-color);
 }
 
+/* Main App Container - Modern Responsive with Taskbar Safety */
 .App {
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
-  background: var(--nexus-background-professional);
-  color: var(--color-text);
+  min-height: 100vh;
+  min-height: calc(100vh - 40px); /* Account for Windows taskbar */
+  width: 100%;
+  background: var(--nexus-background-color);
+  color: var(--nexus-text-color);
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  padding-bottom: env(safe-area-inset-bottom, 40px); /* Safe area for mobile + taskbar */
+  scroll-behavior: smooth;
 }
 
-/* Common styles */
+/* Modern Button System */
 .btn {
-  padding: 10px 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--nexus-border-radius);
   cursor: pointer;
-  font-size: 14px;
+  font-size: 0.875rem;
   font-weight: 500;
-  transition: all 0.3s ease;
+  line-height: 1.25;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+  user-select: none;
+  min-height: 2.5rem;
+}
+
+.btn:focus-visible {
+  box-shadow: var(--nexus-focus-ring);
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 .btn-primary {
-  background-color: var(--color-primary);
-  color: white;
+  background-color: var(--nexus-primary-color);
+  color: var(--nexus-text-inverse);
+  box-shadow: var(--nexus-shadow-sm);
 }
 
-.btn-primary:hover {
-  background-color: var(--color-secondary);
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--nexus-secondary-color);
+  box-shadow: var(--nexus-shadow-md);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+  box-shadow: var(--nexus-shadow-sm);
 }
 
 .btn-secondary {
-  background-color: var(--color-surface);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
+  background-color: var(--nexus-background-secondary);
+  color: var(--nexus-text-color);
+  border: 1px solid var(--nexus-border-color);
 }
 
-.btn-secondary:hover {
-  background-color: var(--color-border);
-}
-
-.btn-danger {
-  background-color: var(--color-error);
-  color: white;
-}
-
-.btn-danger:hover {
-  opacity: 0.9;
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--nexus-hover-bg);
+  border-color: var(--nexus-border-hover);
 }
 
 .btn-outline {
   background-color: transparent;
-  color: var(--color-primary);
-  border: 2px solid var(--color-primary);
+  color: var(--nexus-primary-color);
+  border: 2px solid var(--nexus-primary-color);
 }
 
-.btn-outline:hover {
-  background-color: var(--color-primary);
-  color: white;
+.btn-outline:hover:not(:disabled) {
+  background-color: var(--nexus-primary-color);
+  color: var(--nexus-text-inverse);
+}
+
+.btn-danger {
+  background-color: var(--nexus-error-color);
+  color: var(--nexus-text-inverse);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: #b91c1c;
+}
+
+.btn-success {
+  background-color: var(--nexus-success-color);
+  color: var(--nexus-text-inverse);
+}
+
+.btn-success:hover:not(:disabled) {
+  background-color: #047857;
 }
 
 .btn-large {
-  padding: 15px 30px;
-  font-size: 16px;
+  padding: 1rem 2rem;
+  font-size: 1rem;
+  min-height: 3rem;
+}
+
+.btn-small {
+  padding: 0.5rem 1rem;
+  font-size: 0.75rem;
+  min-height: 2rem;
 }
 
 .btn-block {
   width: 100%;
 }
 
+.btn-icon-only {
+  padding: 0.75rem;
+  min-width: 2.5rem;
+}
+
+/* Modern Input System */
 .input {
-  padding: 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
-  font-size: 14px;
   width: 100%;
-  transition: border-color 0.3s ease;
-  background: var(--color-background);
-  color: var(--color-text);
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--nexus-border-color);
+  border-radius: var(--nexus-border-radius);
+  font-size: 0.875rem;
+  line-height: 1.25;
+  background: var(--nexus-background-color);
+  color: var(--nexus-text-color);
+  transition: all 0.2s ease;
+  min-height: 2.5rem;
 }
 
 .input:focus {
   outline: none;
-  border-color: var(--color-primary);
+  border-color: var(--nexus-primary-color);
+  box-shadow: var(--nexus-focus-ring);
 }
 
+.input:disabled {
+  background-color: var(--nexus-background-tertiary);
+  color: var(--nexus-text-muted);
+  cursor: not-allowed;
+}
+
+.input::placeholder {
+  color: var(--nexus-text-muted);
+}
+
+/* Form Groups */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--nexus-text-color);
+}
+
+.form-error {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--nexus-error-color);
+}
+
+/* Modern Avatar System */
 .avatar {
   border-radius: 50%;
   object-fit: cover;
+  background-color: var(--nexus-background-tertiary);
+  border: 2px solid var(--nexus-background-color);
+  position: relative;
+  display: inline-block;
 }
 
-.avatar-sm {
-  width: 32px;
-  height: 32px;
+.avatar-xs { width: 1.5rem; height: 1.5rem; }
+.avatar-sm { width: 2rem; height: 2rem; }
+.avatar-md { width: 3rem; height: 3rem; }
+.avatar-lg { width: 4rem; height: 4rem; }
+.avatar-xl { width: 5rem; height: 5rem; }
+
+.avatar-group {
+  display: flex;
+  align-items: center;
 }
 
-.avatar-md {
-  width: 48px;
-  height: 48px;
+.avatar-group .avatar {
+  margin-left: -0.5rem;
+  border: 2px solid var(--nexus-background-color);
 }
 
-.avatar-lg {
-  width: 64px;
-  height: 64px;
+.avatar-group .avatar:first-child {
+  margin-left: 0;
 }
 
+/* Status Indicators */
 .status-indicator {
-  width: 10px;
-  height: 10px;
+  width: 0.75rem;
+  height: 0.75rem;
   border-radius: 50%;
-  border: 2px solid white;
+  border: 2px solid var(--nexus-background-color);
   position: absolute;
   bottom: 0;
   right: 0;
+  z-index: 1;
 }
 
-.status-online {
-  background-color: var(--color-success);
+.status-online { background-color: var(--nexus-online-status); }
+.status-offline { background-color: var(--nexus-offline-status); }
+.status-away { background-color: var(--nexus-away-status); }
+.status-busy { background-color: var(--nexus-busy-status); }
+
+/* Card System */
+.card {
+  background: var(--nexus-background-color);
+  border: 1px solid var(--nexus-border-color);
+  border-radius: var(--nexus-border-radius-lg);
+  box-shadow: var(--nexus-shadow-sm);
+  overflow: hidden;
+  transition: all 0.2s ease;
 }
 
-.status-offline {
-  background-color: var(--color-textSecondary);
+.card:hover {
+  box-shadow: var(--nexus-shadow-md);
 }
 
-.status-away {
-  background-color: var(--color-warning);
+.card-header {
+  padding: 1.5rem 1.5rem 0;
+  border-bottom: 1px solid var(--nexus-border-color);
 }
 
-.status-busy {
-  background-color: var(--color-error);
+.card-body {
+  padding: 1.5rem;
+}
+
+.card-footer {
+  padding: 0 1.5rem 1.5rem;
+  border-top: 1px solid var(--nexus-border-color);
+}
+
+/* Loading States */
+.loading {
+  display: inline-block;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--nexus-border-color);
+  border-radius: 50%;
+  border-top-color: var(--nexus-primary-color);
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* Notification Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  border-radius: 0.625rem;
+  background-color: var(--nexus-error-color);
+  color: var(--nexus-text-inverse);
+}
+
+.badge-primary { background-color: var(--nexus-primary-color); }
+.badge-success { background-color: var(--nexus-success-color); }
+.badge-warning { background-color: var(--nexus-warning-color); }
+.badge-info { background-color: var(--nexus-info-color); }
+
+/* Responsive Utilities */
+@media (max-width: 640px) {
+  .btn {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.875rem;
+  }
+  
+  .btn-large {
+    padding: 0.875rem 1.75rem;
+    font-size: 0.875rem;
+  }
+  
+  .input {
+    padding: 0.625rem 0.875rem;
+  }
+}
+
+/* Accessibility Improvements */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High Contrast Mode Support */
+@media (prefers-contrast: high) {
+  .btn-outline {
+    border-width: 3px;
+  }
+  
+  .input:focus {
+    border-width: 3px;
+  }
+}
+/* Taskbar Safety and Accessibility Fixes */
+
+/* Global page container safety */
+.page-container {
+  min-height: calc(100vh - 80px); /* Account for taskbar + extra safety */
+  padding-bottom: 60px; /* Ensure content is never hidden */
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+/* Safe area handling for different operating systems */
+@supports (padding: max(0px)) {
+  .App {
+    padding-bottom: max(40px, env(safe-area-inset-bottom));
+  }
+  
+  .nexus-footer {
+    padding-bottom: max(60px, env(safe-area-inset-bottom) + 20px);
+  }
+}
+
+/* Windows taskbar specific fixes */
+@media screen and (min-width: 1024px) {
+  .App {
+    min-height: calc(100vh - 48px); /* Windows 11 taskbar height */
+  }
+  
+  .page-container {
+    min-height: calc(100vh - 100px);
+    padding-bottom: 80px;
+  }
+}
+
+/* Ensure all full-height sections account for taskbar */
+.full-height-section {
+  min-height: calc(100vh - 120px);
+  padding-bottom: 60px;
+}
+
+/* Hero sections safety */
+.hero,
+.hero-section {
+  min-height: calc(100vh - 140px);
+  padding-bottom: 80px;
+}
+
+/* CTA sections safety */
+.cta,
+.cta-section {
+  padding-bottom: 80px;
+  margin-bottom: 40px;
+}
+
+/* Scroll-to-top button positioning */
+.scroll-to-top {
+  position: fixed;
+  bottom: 80px; /* Above taskbar */
+  right: 20px;
+  width: 48px;
+  height: 48px;
+  background: var(--nexus-primary-color);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+  z-index: 1000;
+  opacity: 0;
+  transform: translateY(20px);
+  pointer-events: none;
+}
+
+.scroll-to-top.visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: all;
+}
+
+.scroll-to-top:hover {
+  background: var(--nexus-secondary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+}
+
+/* Mobile adjustments for taskbar safety */
+@media (max-width: 768px) {
+  .App {
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+  }
+  
+  .page-container {
+    padding-bottom: 40px;
+  }
+  
+  .nexus-footer {
+    padding-bottom: 40px;
+  }
+  
+  .scroll-to-top {
+    bottom: 60px;
+    width: 44px;
+    height: 44px;
+  }
+}
+
+/* Tablet adjustments */
+@media (min-width: 769px) and (max-width: 1023px) {
+  .App {
+    padding-bottom: 50px;
+  }
+  
+  .page-container {
+    padding-bottom: 70px;
+  }
+}
+
+/* Ensure modals and overlays don't get hidden */
+.modal-overlay,
+.overlay {
+  padding-bottom: 60px;
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+}
+
+/* Fix for sticky elements */
+.sticky-bottom {
+  bottom: 60px; /* Above taskbar */
+}
+
+/* Accessibility: Focus indicators above taskbar */
+*:focus-visible {
+  outline: 2px solid var(--nexus-primary-color);
+  outline-offset: 2px;
+  z-index: 9999;
+}
+
+/* Print styles - remove taskbar accommodations */
+@media print {
+  .App {
+    min-height: auto;
+    padding-bottom: 0;
+  }
+  
+  .page-container {
+    min-height: auto;
+    padding-bottom: 0;
+  }
+  
+  .nexus-footer {
+    padding-bottom: 20px;
+  }
+  
+  .scroll-to-top {
+    display: none;
+  }
+}
+
+/* High DPI displays adjustments */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .scroll-to-top {
+    bottom: 85px; /* Slightly higher for high DPI */
+  }
+}
+
+/* Landscape mobile orientation */
+@media (max-width: 768px) and (orientation: landscape) {
+  .App {
+    padding-bottom: 20px;
+  }
+  
+  .page-container {
+    padding-bottom: 30px;
+  }
+  
+  .hero,
+  .hero-section {
+    min-height: calc(100vh - 80px);
+    padding-bottom: 40px;
+  }
+}
+
+/* Ensure content is always scrollable */
+body {
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Fix for pages that use 100vh */
+.vh-100 {
+  height: calc(100vh - 80px) !important;
+  min-height: calc(100vh - 80px) !important;
+}
+
+/* Container max-width with taskbar safety */
+.container-safe {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  padding-bottom: 60px;
+}
+
+/* Section spacing with taskbar safety */
+.section-safe {
+  padding: 4rem 0 6rem 0;
+}
+
+@media (max-width: 768px) {
+  .section-safe {
+    padding: 2rem 0 4rem 0;
+  }
 }

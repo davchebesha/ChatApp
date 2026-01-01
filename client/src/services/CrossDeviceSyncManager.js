@@ -10,7 +10,7 @@ class CrossDeviceSyncManager extends EventEmitter {
     super();
     
     this.options = {
-      serverUrl: options.serverUrl || process.env.REACT_APP_SERVER_URL || 'http://localhost:5000',
+      serverUrl: options.serverUrl || process.env.REACT_APP_SERVER_URL || 'http://localhost:5001',
       reconnectAttempts: options.reconnectAttempts || 5,
       reconnectDelay: options.reconnectDelay || 1000,
       heartbeatInterval: options.heartbeatInterval || 30000,

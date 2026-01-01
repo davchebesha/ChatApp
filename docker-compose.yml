@@ -4,91 +4,279 @@ services:
   # MongoDB
   mongodb:
     image: mongo:5
-    container_name: chat-mongodb
+    container_name: nexus-mongodb
     restart: always
     ports:
       - "27017:27017"
     environment:
       MONGO_INITDB_ROOT_USERNAME: admin
       MONGO_INITDB_ROOT_PASSWORD: password123
-      MONGO_INITDB_DATABASE: chatapp
+      MONGO_INITDB_DATABASE: nexuschat
     volumes:
       - mongodb_data:/data/db
     networks:
-      - chat-network
+      - nexus-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/nexuschat --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Redis
   redis:
     image: redis:7-alpine
-    container_name: chat-redis
+    container_name: nexus-redis
     restart: always
     ports:
       - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
-      - chat-network
+      - nexus-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
-  # Backend Server
-  server:
-    build:
-      context: ./server
-      dockerfile: Dockerfile
-    container_name: chat-server
+  # RabbitMQ
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: nexus-rabbitmq
     restart: always
     ports:
-      - "5000:5000"
+      - "5672:5672"
+      - "15672:15672"
     environment:
-      PORT: 5000
-      MONGODB_URI: mongodb://admin:password123@mongodb:27017/chatapp?authSource=admin
-      JWT_SECRET: your_super_secret_jwt_key_change_this
-      JWT_EXPIRE: 7d
-      CLIENT_URL: http://localhost:3000
-      NODE_ENV: production
+      RABBITMQ_DEFAULT_USER: nexus
+      RABBITMQ_DEFAULT_PASS: nexus123
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - nexus-network
+    healthcheck:
+      test: rabbitmq-diagnostics -q ping
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # TURN Server (Coturn)
+  coturn:
+    image: coturn/coturn:latest
+    container_name: nexus-coturn
+    restart: always
+    ports:
+      - "3478:3478/udp"
+      - "3478:3478/tcp"
+      - "49152-65535:49152-65535/udp"
+    environment:
+      - TURN_USERNAME=nexus
+      - TURN_PASSWORD=nexus123
+      - TURN_REALM=nexus.local
+    command: >
+      -n
+      --log-file=stdout
+      --lt-cred-mech
+      --fingerprint
+      --no-multicast-peers
+      --no-cli
+      --no-tlsv1
+      --no-tlsv1_1
+      --realm=nexus.local
+      --user=nexus:nexus123
+      --external-ip=$$(detect-external-ip)
+    networks:
+      - nexus-network
+
+  # API Gateway
+  gateway:
+    build:
+      context: ./services/gateway
+      dockerfile: Dockerfile
+    container_name: nexus-gateway
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      AUTH_SERVICE_URL: http://auth-service:3001
+      CHAT_SERVICE_URL: http://chat-service:3002
+      MEDIA_SERVICE_URL: http://media-service:3003
+      USER_SERVICE_URL: http://user-service:3004
       REDIS_URL: redis://redis:6379
+    depends_on:
+      - redis
+      - auth-service
+      - chat-service
+      - media-service
+      - user-service
+    networks:
+      - nexus-network
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: 3001
+      MONGODB_URI: mongodb://admin:password123@mongodb:27017/nexuschat?authSource=admin
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: your_super_secret_jwt_key_change_this_in_production
+      JWT_EXPIRE: 15m
+      JWT_REFRESH_EXPIRE: 7d
+      BCRYPT_ROUNDS: 12
+      MAX_LOGIN_ATTEMPTS: 3
+      LOCKOUT_TIME: 3600
+      NODE_ENV: production
     depends_on:
       - mongodb
       - redis
-    volumes:
-      - ./server/uploads:/app/uploads
     networks:
-      - chat-network
+      - nexus-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Chat Service (Scalable)
+  chat-service:
+    build:
+      context: ./services/chat-service
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3002-3010:3002"
+    environment:
+      PORT: 3002
+      MONGODB_URI: mongodb://admin:password123@mongodb:27017/nexuschat?authSource=admin
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://nexus:nexus123@rabbitmq:5672
+      JWT_SECRET: your_super_secret_jwt_key_change_this_in_production
+      TURN_SERVER_URL: turn:coturn:3478
+      TURN_USERNAME: nexus
+      TURN_PASSWORD: nexus123
+      NODE_ENV: production
+    depends_on:
+      - mongodb
+      - redis
+      - rabbitmq
+      - coturn
+    networks:
+      - nexus-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Media Service
+  media-service:
+    build:
+      context: ./services/media-service
+      dockerfile: Dockerfile
+    container_name: nexus-media-service
+    restart: always
+    ports:
+      - "3003:3003"
+    environment:
+      PORT: 3003
+      MONGODB_URI: mongodb://admin:password123@mongodb:27017/nexuschat?authSource=admin
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://nexus:nexus123@rabbitmq:5672
+      UPLOAD_PATH: /app/uploads
+      MAX_FILE_SIZE: 50MB
+      NODE_ENV: production
+    depends_on:
+      - mongodb
+      - redis
+      - rabbitmq
+    volumes:
+      - media_uploads:/app/uploads
+    networks:
+      - nexus-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # User Service
+  user-service:
+    build:
+      context: ./services/user-service
+      dockerfile: Dockerfile
+    container_name: nexus-user-service
+    restart: always
+    ports:
+      - "3004:3004"
+    environment:
+      PORT: 3004
+      MONGODB_URI: mongodb://admin:password123@mongodb:27017/nexuschat?authSource=admin
+      REDIS_URL: redis://redis:6379
+      RABBITMQ_URL: amqp://nexus:nexus123@rabbitmq:5672
+      NODE_ENV: production
+    depends_on:
+      - mongodb
+      - redis
+      - rabbitmq
+    networks:
+      - nexus-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Frontend Client
   client:
     build:
       context: ./client
       dockerfile: Dockerfile
-    container_name: chat-client
+    container_name: nexus-client
     restart: always
     ports:
       - "3000:80"
     environment:
-      REACT_APP_API_URL: http://localhost:5000
+      REACT_APP_API_URL: http://localhost:8080
+      REACT_APP_WS_URL: http://localhost:8080
+      REACT_APP_TURN_SERVER: turn:localhost:3478
+      REACT_APP_TURN_USERNAME: nexus
+      REACT_APP_TURN_PASSWORD: nexus123
     depends_on:
-      - server
+      - gateway
     networks:
-      - chat-network
+      - nexus-network
 
-  # Nginx Load Balancer (optional for multiple server instances)
+  # Load Balancer (Nginx)
   nginx:
     image: nginx:alpine
-    container_name: chat-nginx
+    container_name: nexus-nginx
     restart: always
     ports:
       - "80:80"
       - "443:443"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
     depends_on:
-      - server
+      - gateway
     networks:
-      - chat-network
+      - nexus-network
 
 volumes:
   mongodb_data:
   redis_data:
+  rabbitmq_data:
+  media_uploads:
 
 networks:
-  chat-network:
+  nexus-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

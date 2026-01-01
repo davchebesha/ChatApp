@@ -353,6 +353,21 @@ class BackgroundStorageManager {
   }
 
   /**
+   * Remove current background
+   * @returns {Promise<boolean>} - Success status
+   */
+  async removeCurrentBackground() {
+    const currentId = localStorage.getItem('nexus-current-background-id');
+    if (currentId) {
+      return this.removeBackground(currentId);
+    }
+    
+    // Also clean up any legacy storage
+    localStorage.removeItem('customChatBg');
+    return true;
+  }
+
+  /**
    * Migrate legacy localStorage backgrounds to IndexedDB
    * @returns {Promise<boolean>} - Migration success
    */

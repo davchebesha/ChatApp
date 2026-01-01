@@ -1,10 +1,32 @@
-import React, { useState } from 'react';
-import { FiX, FiImage } from 'react-icons/fi';
+import React, { useState, useEffect } from 'react';
+import { FiX, FiImage, FiLoader } from 'react-icons/fi';
+import { toast } from 'react-toastify';
+import { ImageCompressor } from '../../utils/imageCompression';
+import BackgroundStorageManager from '../../utils/BackgroundStorageManager';
 import './Chat.css';
 
 const ChatSettings = ({ onClose }) => {
   const [background, setBackground] = useState(localStorage.getItem('chatBackground') || 'default');
-  const [customBg, setCustomBg] = useState(localStorage.getItem('customChatBg') || '');
+  const [customBg, setCustomBg] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [backgroundManager] = useState(() => new BackgroundStorageManager());
+
+  // Load current custom background on component mount
+  useEffect(() => {
+    const loadCurrentBackground = async () => {
+      try {
+        const currentBg = await backgroundManager.getCurrentBackground();
+        if (currentBg && currentBg.imageData) {
+          setCustomBg(currentBg.imageData);
+          document.documentElement.style.setProperty('--chat-bg-image', `url(${currentBg.imageData})`);
+        }
+      } catch (error) {
+        console.error('Failed to load current background:', error);
+      }
+    };
+
+    loadCurrentBackground();
+  }, [backgroundManager]);
 
   const backgrounds = [
     { id: 'default', name: 'Default', color: '#f0f2f5' },
@@ -25,17 +47,63 @@ const ChatSettings = ({ onClose }) => {
     }
   };
 
-  const handleCustomBackground = (e) => {
+  const handleCustomBackground = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const imageUrl = event.target.result;
-        setCustomBg(imageUrl);
-        localStorage.setItem('customChatBg', imageUrl);
-        document.documentElement.style.setProperty('--chat-bg-image', `url(${imageUrl})`);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    // Validate file
+    const validation = ImageCompressor.validateImageFile(file);
+    if (!validation.valid) {
+      toast.error(validation.error);
+      return;
+    }
+
+    setUploading(true);
+    
+    try {
+      // Show loading toast for large files
+      if (file.size > 1024 * 1024) { // 1MB
+        toast.info('Compressing large image, please wait...');
+      }
+
+      // Compress the image
+      const compressedImage = await ImageCompressor.compressImage(file, {
+        maxWidth: 1920,
+        maxHeight: 1080,
+        quality: 0.8
+      });
+
+      // Check final size
+      const compressedSize = ImageCompressor.getBase64Size(compressedImage);
+      console.log(`📸 Final compressed size: ${Math.round(compressedSize / 1024)}KB`);
+
+      // Store using BackgroundStorageManager (IndexedDB)
+      const backgroundId = await backgroundManager.storeBackground(compressedImage, {
+        originalName: file.name,
+        originalSize: file.size,
+        compressedSize: compressedSize,
+        uploadDate: new Date().toISOString()
+      });
+
+      // Update UI
+      setCustomBg(compressedImage);
+      document.documentElement.style.setProperty('--chat-bg-image', `url(${compressedImage})`);
+      
+      toast.success('Background updated successfully!');
+      console.log(`✅ Background stored with ID: ${backgroundId}`);
+
+    } catch (error) {
+      console.error('Failed to process background image:', error);
+      
+      if (error.name === 'QuotaExceededError') {
+        toast.error('Image too large for storage. Please try a smaller image or clear some browser data.');
+      } else {
+        toast.error('Failed to upload background. Please try again.');
+      }
+    } finally {
+      setUploading(false);
+      // Clear the input
+      e.target.value = '';
     }
   };
 
@@ -67,17 +135,21 @@ const ChatSettings = ({ onClose }) => {
 
           <h3 style={{ marginTop: '24px' }}>Custom Background</h3>
           <div className="custom-bg-upload">
-            <label htmlFor="bg-upload" className="upload-label">
-              <FiImage />
-              <span>Upload Image</span>
+            <label htmlFor="bg-upload" className={`upload-label ${uploading ? 'uploading' : ''}`}>
+              {uploading ? <FiLoader className="spinning" /> : <FiImage />}
+              <span>{uploading ? 'Processing...' : 'Upload Image'}</span>
             </label>
             <input
               id="bg-upload"
               type="file"
               accept="image/*"
               onChange={handleCustomBackground}
+              disabled={uploading}
               style={{ display: 'none' }}
             />
+            <small className="upload-hint">
+              Supports JPEG, PNG, GIF, WebP. Max 10MB. Large images will be compressed automatically.
+            </small>
           </div>
 
           {customBg && (
@@ -85,11 +157,18 @@ const ChatSettings = ({ onClose }) => {
               <img src={customBg} alt="Custom background" />
               <button 
                 className="btn btn-secondary btn-sm"
-                onClick={() => {
-                  setCustomBg('');
-                  localStorage.removeItem('customChatBg');
-                  document.documentElement.style.removeProperty('--chat-bg-image');
+                onClick={async () => {
+                  try {
+                    await backgroundManager.removeCurrentBackground();
+                    setCustomBg('');
+                    document.documentElement.style.removeProperty('--chat-bg-image');
+                    toast.success('Background removed');
+                  } catch (error) {
+                    console.error('Failed to remove background:', error);
+                    toast.error('Failed to remove background');
+                  }
                 }}
+                disabled={uploading}
               >
                 Remove
               </button>

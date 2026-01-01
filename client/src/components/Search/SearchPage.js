@@ -4,6 +4,7 @@ import { useChat } from '../../contexts/ChatContext';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../services/api';
 import { toast } from 'react-toastify';
+import Avatar from '../Common/Avatar';
 import './Search.css';
 
 const SearchPage = ({ onClose }) => {
@@ -186,10 +187,11 @@ const SearchPage = ({ onClose }) => {
                       className="search-item user-item"
                       onClick={() => handleUserClick(foundUser)}
                     >
-                      <img
-                        src={foundUser.avatar || '/default-avatar.png'}
+                      <Avatar 
+                        src={foundUser.avatar}
                         alt="Avatar"
-                        className="avatar avatar-md"
+                        size="md"
+                        username={foundUser.username}
                       />
                       <div className="search-item-info">
                         <h4>{foundUser.username}</h4>
@@ -215,10 +217,11 @@ const SearchPage = ({ onClose }) => {
                       className="search-item message-item"
                       onClick={() => handleMessageClick(message)}
                     >
-                      <img
-                        src={message.sender?.avatar || '/default-avatar.png'}
+                      <Avatar 
+                        src={message.sender?.avatar}
                         alt="Avatar"
-                        className="avatar avatar-sm"
+                        size="sm"
+                        username={message.sender?.username}
                       />
                       <div className="search-item-info">
                         <h4>{message.sender?.username}</h4>

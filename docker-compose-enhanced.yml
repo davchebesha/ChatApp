@@ -1,0 +1,433 @@
+version: '3.8'
+
+services:
+  # Load Balancer with Geographic Distribution
+  nginx-lb:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-distributed.conf:/etc/nginx/nginx.conf
+      - ./ssl:/etc/nginx/ssl
+    depends_on:
+      - app-server-1
+      - app-server-2
+      - app-server-3
+    networks:
+      - nexus-network
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+          - node.role == manager
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Application Servers with Geographic Distribution
+  app-server-1:
+    build: .
+    environment:
+      - NODE_ENV=production
+      - PORT=5001
+      - SERVER_ID=app-server-1
+      - REGION=us-east-1
+      - CLUSTER_MODE=true
+      - MONGODB_URI=mongodb://mongo-primary:27017,mongo-secondary-1:27017,mongo-secondary-2:27017/nexuschat?replicaSet=rs0
+      - REDIS_CLUSTER_NODES=redis-1:6379,redis-2:6379,redis-3:6379
+      - RABBITMQ_URL=amqp://rabbitmq-cluster:5672
+      - TURN_SERVER_URL=turn:turn-server:3478
+      - MONITORING_ENABLED=true
+      - GEO_DISTRIBUTION_ENABLED=true
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    networks:
+      - nexus-network
+    depends_on:
+      - mongo-primary
+      - redis-1
+      - rabbitmq-cluster
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/api/monitoring/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  app-server-2:
+    build: .
+    environment:
+      - NODE_ENV=production
+      - PORT=5002
+      - SERVER_ID=app-server-2
+      - REGION=us-west-2
+      - CLUSTER_MODE=true
+      - MONGODB_URI=mongodb://mongo-primary:27017,mongo-secondary-1:27017,mongo-secondary-2:27017/nexuschat?replicaSet=rs0
+      - REDIS_CLUSTER_NODES=redis-1:6379,redis-2:6379,redis-3:6379
+      - RABBITMQ_URL=amqp://rabbitmq-cluster:5672
+      - TURN_SERVER_URL=turn:turn-server:3478
+      - MONITORING_ENABLED=true
+      - GEO_DISTRIBUTION_ENABLED=true
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    networks:
+      - nexus-network
+    depends_on:
+      - mongo-primary
+      - redis-2
+      - rabbitmq-cluster
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/api/monitoring/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  app-server-3:
+    build: .
+    environment:
+      - NODE_ENV=production
+      - PORT=5003
+      - SERVER_ID=app-server-3
+      - REGION=eu-west-1
+      - CLUSTER_MODE=true
+      - MONGODB_URI=mongodb://mongo-primary:27017,mongo-secondary-1:27017,mongo-secondary-2:27017/nexuschat?replicaSet=rs0
+      - REDIS_CLUSTER_NODES=redis-1:6379,redis-2:6379,redis-3:6379
+      - RABBITMQ_URL=amqp://rabbitmq-cluster:5672
+      - TURN_SERVER_URL=turn:turn-server:3478
+      - MONITORING_ENABLED=true
+      - GEO_DISTRIBUTION_ENABLED=true
+    volumes:
+      - ./uploads:/app/uploads
+      - ./logs:/app/logs
+    networks:
+      - nexus-network
+    depends_on:
+      - mongo-primary
+      - redis-3
+      - rabbitmq-cluster
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5003/api/monitoring/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # MongoDB Replica Set with Enhanced Monitoring
+  mongo-primary:
+    image: mongo:7.0
+    command: mongod --replSet rs0 --bind_ip_all --port 27017
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=nexuschat2024
+      - MONGO_INITDB_DATABASE=nexuschat
+    volumes:
+      - mongo-primary-data:/data/db
+      - ./mongo-init:/docker-entrypoint-initdb.d
+    networks:
+      - nexus-network
+    ports:
+      - "27017:27017"
+    deploy:
+      placement:
+        constraints:
+          - node.labels.mongo.role == primary
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mongo-secondary-1:
+    image: mongo:7.0
+    command: mongod --replSet rs0 --bind_ip_all --port 27017
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=nexuschat2024
+    volumes:
+      - mongo-secondary-1-data:/data/db
+    networks:
+      - nexus-network
+    depends_on:
+      - mongo-primary
+    deploy:
+      placement:
+        constraints:
+          - node.labels.mongo.role == secondary
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  mongo-secondary-2:
+    image: mongo:7.0
+    command: mongod --replSet rs0 --bind_ip_all --port 27017
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=nexuschat2024
+    volumes:
+      - mongo-secondary-2-data:/data/db
+    networks:
+      - nexus-network
+    depends_on:
+      - mongo-primary
+    deploy:
+      placement:
+        constraints:
+          - node.labels.mongo.role == secondary
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis Cluster with Enhanced Monitoring
+  redis-1:
+    image: redis:7-alpine
+    command: redis-server --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --port 6379
+    volumes:
+      - redis-1-data:/data
+    networks:
+      - nexus-network
+    ports:
+      - "6379:6379"
+    deploy:
+      placement:
+        constraints:
+          - node.labels.redis.role == master
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis-2:
+    image: redis:7-alpine
+    command: redis-server --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --port 6379
+    volumes:
+      - redis-2-data:/data
+    networks:
+      - nexus-network
+    ports:
+      - "6380:6379"
+    deploy:
+      placement:
+        constraints:
+          - node.labels.redis.role == master
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  redis-3:
+    image: redis:7-alpine
+    command: redis-server --cluster-enabled yes --cluster-config-file nodes.conf --cluster-node-timeout 5000 --appendonly yes --port 6379
+    volumes:
+      - redis-3-data:/data
+    networks:
+      - nexus-network
+    ports:
+      - "6381:6379"
+    deploy:
+      placement:
+        constraints:
+          - node.labels.redis.role == master
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # RabbitMQ Cluster with Enhanced Monitoring
+  rabbitmq-cluster:
+    image: rabbitmq:3-management-alpine
+    environment:
+      - RABBITMQ_DEFAULT_USER=nexuschat
+      - RABBITMQ_DEFAULT_PASS=nexuschat2024
+      - RABBITMQ_CLUSTER_NAME=nexuschat-cluster
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks:
+      - nexus-network
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    deploy:
+      replicas: 3
+      placement:
+        constraints:
+          - node.role == manager
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # TURN Server for WebRTC with Geographic Distribution
+  turn-server:
+    image: coturn/coturn:alpine
+    command: turnserver --listening-port=3478 --tls-listening-port=5349 --min-port=10000 --max-port=20000 --verbose --fingerprint --lt-cred-mech --realm=nexuschat.com --user=nexuschat:nexuschat2024
+    networks:
+      - nexus-network
+    ports:
+      - "3478:3478"
+      - "3478:3478/udp"
+      - "5349:5349"
+      - "10000-20000:10000-20000/udp"
+    deploy:
+      replicas: 2
+      placement:
+        constraints:
+          - node.role == worker
+    healthcheck:
+      test: ["CMD", "turnutils_peer", "-n", "1", "-t", "1", "127.0.0.1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Enhanced Monitoring Stack
+  prometheus:
+    image: prom/prometheus:latest
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    networks:
+      - nexus-network
+    ports:
+      - "9090:9090"
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=nexuschat2024
+      - GF_INSTALL_PLUGINS=grafana-worldmap-panel,grafana-piechart-panel
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    networks:
+      - nexus-network
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    deploy:
+      placement:
+        constraints:
+          - node.role == manager
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Node Exporter for System Metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - nexus-network
+    ports:
+      - "9100:9100"
+    deploy:
+      mode: global
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9100/metrics"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # cAdvisor for Container Metrics
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    networks:
+      - nexus-network
+    ports:
+      - "8080:8080"
+    deploy:
+      mode: global
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  mongo-primary-data:
+  mongo-secondary-1-data:
+  mongo-secondary-2-data:
+  redis-1-data:
+  redis-2-data:
+  redis-3-data:
+  rabbitmq-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  nexus-network:
+    driver: overlay
+    attachable: true
+    ipam:
+      config:
+        - subnet: 10.0.0.0/24

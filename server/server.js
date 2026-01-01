@@ -13,6 +13,7 @@ const userRoutes = require('./routes/users');
 const chatRoutes = require('./routes/chats');
 const messageRoutes = require('./routes/messages');
 const fileRoutes = require('./routes/files');
+const monitoringRoutes = require('./routes/monitoring');
 
 const { initializeWebSocket } = require('./websocket/socketHandler');
 const { initializeWebRTC } = require('./webrtc/signalingServer');
@@ -66,6 +67,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/files', fileRoutes);
+app.use('/api/monitoring', monitoringRoutes);
 
 // Enhanced health check
 app.get('/health', async (req, res) => {
@@ -120,7 +122,7 @@ initializeWebRTC(io, messageQueue);
 app.use(errorHandler);
 
 // Start server
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 server.listen(PORT, async () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 WebSocket server ready`);

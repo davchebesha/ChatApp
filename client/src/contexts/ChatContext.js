@@ -1,8 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useSocket } from './SocketContext';
 import { useAuth } from './AuthContext';
-import api from '../services/api';
-import { toast } from 'react-toastify';
 
 const ChatContext = createContext();
 
@@ -21,199 +18,127 @@ export const ChatProvider = ({ children }) => {
   const [typingUsers, setTypingUsers] = useState({});
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   
-  const { socket, connected } = useSocket();
   const { user } = useAuth();
 
-  // Load chats
+  // Mock data for development
   useEffect(() => {
     if (user) {
-      loadChats();
+      // Create some mock chats for testing
+      const mockChats = [
+        {
+          _id: '1',
+          name: 'General',
+          type: 'group',
+          participants: [
+            { _id: user.id, username: user.username, avatar: user.avatar },
+            { _id: '2', username: 'Alice', avatar: null },
+            { _id: '3', username: 'Bob', avatar: null }
+          ],
+          lastMessage: {
+            content: 'Welcome to NexusChat!',
+            sender: { username: 'System' },
+            timestamp: new Date()
+          },
+          updatedAt: new Date()
+        },
+        {
+          _id: '2',
+          type: 'direct',
+          participants: [
+            { _id: user.id, username: user.username, avatar: user.avatar },
+            { _id: '2', username: 'Alice', avatar: null }
+          ],
+          lastMessage: {
+            content: 'Hey there!',
+            sender: { username: 'Alice' },
+            timestamp: new Date()
+          },
+          updatedAt: new Date()
+        }
+      ];
+      setChats(mockChats);
     }
   }, [user]);
 
-  // Socket event listeners
-  useEffect(() => {
-    if (!socket || !connected) return;
-
-    // Join all chat rooms
-    const chatIds = chats.map(chat => chat._id);
-    if (chatIds.length > 0) {
-      socket.emit('join_chats', chatIds);
-    }
-
-    // New message
-    socket.on('new_message', (message) => {
-      if (selectedChat && message.chat === selectedChat._id) {
-        setMessages(prev => [...prev, message]);
-      }
-      
-      // Update chat's last message
-      setChats(prev => prev.map(chat => 
-        chat._id === message.chat 
-          ? { ...chat, lastMessage: message, updatedAt: new Date() }
-          : chat
-      ).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)));
-
-      // Show notification if not in current chat
-      if (!selectedChat || message.chat !== selectedChat._id) {
-        if (message.sender._id !== user.id) {
-          toast.info(`New message from ${message.sender.username}`);
-        }
-      }
-    });
-
-    // User typing
-    socket.on('user_typing', ({ userId, username, chatId, isTyping }) => {
-      if (selectedChat && chatId === selectedChat._id) {
-        setTypingUsers(prev => ({
-          ...prev,
-          [userId]: isTyping ? username : null
-        }));
-      }
-    });
-
-    // Message edited
-    socket.on('message_edited', (message) => {
-      setMessages(prev => prev.map(msg => 
-        msg._id === message._id ? message : msg
-      ));
-    });
-
-    // Message deleted
-    socket.on('message_deleted', ({ messageId, deleteForEveryone }) => {
-      if (deleteForEveryone) {
-        setMessages(prev => prev.map(msg => 
-          msg._id === messageId 
-            ? { ...msg, deleted: true, content: 'This message was deleted' }
-            : msg
-        ));
-      } else {
-        setMessages(prev => prev.filter(msg => msg._id !== messageId));
-      }
-    });
-
-    // Reaction added
-    socket.on('reaction_added', ({ messageId, userId, emoji }) => {
-      setMessages(prev => prev.map(msg => {
-        if (msg._id === messageId) {
-          const reactions = msg.reactions || [];
-          const existingIndex = reactions.findIndex(r => r.user === userId);
-          
-          if (existingIndex >= 0) {
-            reactions[existingIndex].emoji = emoji;
-          } else {
-            reactions.push({ user: userId, emoji });
-          }
-          
-          return { ...msg, reactions };
-        }
-        return msg;
-      }));
-    });
-
-    // User status
-    socket.on('user_status', ({ userId, status, lastSeen }) => {
-      if (status === 'online') {
-        setOnlineUsers(prev => new Set([...prev, userId]));
-      } else {
-        setOnlineUsers(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(userId);
-          return newSet;
-        });
-      }
-
-      // Update user status in chats
-      setChats(prev => prev.map(chat => ({
-        ...chat,
-        participants: chat.participants?.map(p => 
-          p._id === userId ? { ...p, status, lastSeen } : p
-        )
-      })));
-    });
-
-    return () => {
-      socket.off('new_message');
-      socket.off('user_typing');
-      socket.off('message_edited');
-      socket.off('message_deleted');
-      socket.off('reaction_added');
-      socket.off('user_status');
-    };
-  }, [socket, connected, chats, selectedChat, user]);
-
-  const loadChats = async () => {
-    try {
-      const response = await api.get('/chats');
-      setChats(response.data.chats);
-    } catch (error) {
-      console.error('Load chats error:', error);
-      toast.error('Failed to load chats');
-    }
-  };
-
-  const loadMessages = async (chatId) => {
-    try {
-      const response = await api.get(`/messages/${chatId}`);
-      setMessages(response.data.messages);
-    } catch (error) {
-      console.error('Load messages error:', error);
-      toast.error('Failed to load messages');
-    }
-  };
-
   const selectChat = async (chat) => {
     setSelectedChat(chat);
-    setMessages([]);
-    await loadMessages(chat._id);
     
-    if (socket) {
-      socket.emit('join_chat', chat._id);
-    }
+    // Mock messages for the selected chat
+    const mockMessages = [
+      {
+        _id: '1',
+        content: 'Welcome to NexusChat! This is a professional messaging platform.',
+        sender: { _id: 'system', username: 'System', avatar: '/logo.svg' },
+        createdAt: new Date(Date.now() - 3600000).toISOString(),
+        type: 'text'
+      },
+      {
+        _id: '2',
+        content: 'Thanks for trying out our chat application!',
+        sender: { _id: '2', username: 'Alice', avatar: null },
+        createdAt: new Date(Date.now() - 1800000).toISOString(),
+        type: 'text'
+      },
+      {
+        _id: '3',
+        content: 'The interface looks great! Really professional.',
+        sender: { _id: user?.id, username: user?.username, avatar: user?.avatar },
+        createdAt: new Date(Date.now() - 900000).toISOString(),
+        type: 'text'
+      }
+    ];
+    setMessages(mockMessages);
   };
 
   const sendMessage = (content, type = 'text', replyTo = null) => {
-    if (!socket || !selectedChat) return;
+    if (!selectedChat || !user) return;
 
-    socket.emit('send_message', {
-      chatId: selectedChat._id,
+    const newMessage = {
+      _id: Date.now().toString(),
       content,
       type,
+      sender: {
+        _id: user.id,
+        username: user.username,
+        avatar: user.avatar
+      },
+      createdAt: new Date().toISOString(),
       replyTo
-    });
+    };
+
+    setMessages(prev => [...prev, newMessage]);
+    
+    // Update chat's last message
+    setChats(prev => prev.map(chat => 
+      chat._id === selectedChat._id 
+        ? { ...chat, lastMessage: newMessage, updatedAt: new Date() }
+        : chat
+    ));
   };
 
   const sendTyping = (isTyping) => {
-    if (!socket || !selectedChat) return;
-
-    socket.emit('typing', {
-      chatId: selectedChat._id,
-      isTyping
-    });
+    // Mock typing indicator
+    console.log('Typing:', isTyping);
   };
 
   const createChat = async (type, participants, name, description) => {
-    try {
-      const response = await api.post('/chats', {
-        type,
-        participants,
-        name,
-        description
-      });
-      
-      const newChat = response.data.chat;
-      setChats(prev => [newChat, ...prev]);
-      
-      if (socket) {
-        socket.emit('join_chat', newChat._id);
-      }
-      
-      return newChat;
-    } catch (error) {
-      console.error('Create chat error:', error);
-      toast.error('Failed to create chat');
-      return null;
-    }
+    const newChat = {
+      _id: Date.now().toString(),
+      type,
+      participants,
+      name,
+      description,
+      lastMessage: null,
+      updatedAt: new Date()
+    };
+    
+    setChats(prev => [newChat, ...prev]);
+    return newChat;
+  };
+
+  const loadChats = async () => {
+    // Mock function - chats are loaded in useEffect
+    console.log('Loading chats...');
   };
 
   const value = {

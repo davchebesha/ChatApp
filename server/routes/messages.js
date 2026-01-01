@@ -6,6 +6,7 @@ const {
   editMessage,
   deleteMessage,
   addReaction,
+  toggleReaction,
   searchMessages
 } = require('../controllers/messageController');
 const { protect } = require('../middleware/auth');
@@ -17,5 +18,6 @@ router.post('/', protect, upload.single('file'), sendMessage);
 router.put('/:id', protect, editMessage);
 router.delete('/:id', protect, deleteMessage);
 router.post('/:id/reaction', protect, addReaction);
+router.post('/:id/toggle-reaction', protect, toggleReaction);
 
 module.exports = router;

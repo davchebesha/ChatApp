@@ -189,6 +189,52 @@ exports.addReaction = async (req, res) => {
   }
 };
 
+// Toggle reaction (add or remove)
+exports.toggleReaction = async (req, res) => {
+  try {
+    const { emoji } = req.body;
+    const message = await Message.findById(req.params.id);
+
+    if (!message) {
+      return res.status(404).json({ message: 'Message not found' });
+    }
+
+    // Check if user already reacted with this emoji
+    const existingReactionIndex = message.reactions.findIndex(
+      r => r.user.toString() === req.user._id.toString() && r.emoji === emoji
+    );
+
+    if (existingReactionIndex !== -1) {
+      // Remove the reaction if it exists with the same emoji
+      message.reactions.splice(existingReactionIndex, 1);
+    } else {
+      // Check if user has any other reaction
+      const existingUserReaction = message.reactions.find(
+        r => r.user.toString() === req.user._id.toString()
+      );
+
+      if (existingUserReaction) {
+        // Update existing reaction with new emoji
+        existingUserReaction.emoji = emoji;
+      } else {
+        // Add new reaction
+        message.reactions.push({ user: req.user._id, emoji });
+      }
+    }
+
+    await message.save();
+
+    res.json({
+      success: true,
+      message,
+      action: existingReactionIndex !== -1 ? 'removed' : 'added'
+    });
+  } catch (error) {
+    console.error('Toggle reaction error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
 // Search messages
 exports.searchMessages = async (req, res) => {
   try {

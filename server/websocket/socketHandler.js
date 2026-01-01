@@ -251,7 +251,55 @@ const initializeWebSocket = (io, messageQueue = null) => {
       }
     });
 
-    // Add reaction
+    // Toggle reaction (add or remove)
+    socket.on('toggle_reaction', async (data) => {
+      try {
+        const { messageId, emoji, chatId } = data;
+        
+        const message = await Message.findById(messageId);
+        if (message) {
+          const existingReactionIndex = message.reactions.findIndex(
+            r => r.user.toString() === socket.userId && r.emoji === emoji
+          );
+
+          if (existingReactionIndex !== -1) {
+            // Remove the reaction if it exists with the same emoji
+            message.reactions.splice(existingReactionIndex, 1);
+            
+            await message.save();
+
+            io.to(chatId).emit('reaction_removed', {
+              messageId,
+              userId: socket.userId,
+              emoji
+            });
+          } else {
+            // Add new reaction or update existing reaction with different emoji
+            const existingUserReaction = message.reactions.find(
+              r => r.user.toString() === socket.userId
+            );
+
+            if (existingUserReaction) {
+              existingUserReaction.emoji = emoji;
+            } else {
+              message.reactions.push({ user: socket.userId, emoji });
+            }
+
+            await message.save();
+
+            io.to(chatId).emit('reaction_added', {
+              messageId,
+              userId: socket.userId,
+              emoji
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Toggle reaction error:', error);
+      }
+    });
+
+    // Legacy support for add_reaction (keep for backward compatibility)
     socket.on('add_reaction', async (data) => {
       try {
         const { messageId, emoji, chatId } = data;

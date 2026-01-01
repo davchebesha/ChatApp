@@ -50,5 +50,5 @@
     "@svgr/webpack": "^6.5.1",
     "resolve-url-loader": "^5.0.0"
   },
-  "proxy": "http://localhost:5000"
+  "proxy": "http://localhost:5001"
 }

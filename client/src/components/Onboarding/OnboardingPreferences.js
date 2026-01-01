@@ -6,7 +6,7 @@ import './Onboarding.css';
 
 const OnboardingPreferences = () => {
   const { nextStep, previousStep } = useNavigation();
-  const { themes, setTheme, currentTheme } = useTheme();
+  const { themes, changeTheme, currentTheme } = useTheme();
   
   const [preferences, setPreferences] = useState({
     theme: currentTheme,
@@ -22,7 +22,7 @@ const OnboardingPreferences = () => {
     }));
     
     if (key === 'theme') {
-      setTheme(value);
+      changeTheme(value);
     }
   };
 

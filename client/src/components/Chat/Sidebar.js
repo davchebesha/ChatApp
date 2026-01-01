@@ -7,6 +7,7 @@ import SearchPage from '../Search/SearchPage';
 import SettingsPage from '../Settings/SettingsPage';
 import ProfilePage from '../Profile/ProfilePage';
 import NotificationsPage from '../Notifications/NotificationsPage';
+import Avatar from '../Common/Avatar';
 import './Chat.css';
 
 const Sidebar = ({ show, isCollapsed = false, showIconsOnly = false }) => {
@@ -37,7 +38,7 @@ const Sidebar = ({ show, isCollapsed = false, showIconsOnly = false }) => {
   const getChatAvatar = (chat) => {
     if (chat.type === 'private') {
       const otherUser = chat.participants.find(p => p._id !== user.id);
-      return otherUser?.avatar || '/default-avatar.png';
+      return otherUser?.avatar || '/default-avatar.svg';
     }
     return chat.avatar || '/default-group.png';
   };
@@ -87,7 +88,12 @@ const Sidebar = ({ show, isCollapsed = false, showIconsOnly = false }) => {
     <div className={`sidebar ${show ? 'show' : 'hide'} ${isCollapsed ? 'collapsed' : ''}`}>
       <div className="sidebar-header">
         <div className="user-info" onClick={() => setShowProfile(true)} style={{ cursor: 'pointer' }}>
-          <img src={user?.avatar || '/default-avatar.png'} alt="Avatar" className="avatar avatar-md" />
+          <Avatar 
+            src={user?.avatar}
+            alt="Avatar"
+            size="md"
+            username={user?.username}
+          />
           {!showIconsOnly && (
             <div>
               <h3>{user?.username}</h3>
